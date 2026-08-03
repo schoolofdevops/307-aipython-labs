@@ -1,0 +1,39 @@
+{
+  "checks": [
+    { "id": "m1-lab-files-present", "describe": "all five M1 lab assets exist",
+      "run": "ls labs/m1/scenarios.md labs/m1/decision-worksheet.md labs/m1/architecture-map.md labs/m1/solutions.md labs/m1/check.sh",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m1-eight-scenarios", "describe": "scenarios.md defines exactly 8 scenarios",
+      "run": "grep -c '^## Scenario' labs/m1/scenarios.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m1-worksheet-eight-rows", "describe": "the decision worksheet has one table row per scenario (1-8)",
+      "run": "grep -Ec '^\\| *[1-8] *\\|' labs/m1/decision-worksheet.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m1-worked-example-filled", "describe": "scenario 1 ships pre-filled as the worked example",
+      "run": "bash labs/m1/check.sh labs/m1/decision-worksheet.md || true",
+      "assert": { "contains": "PASS  scenario 1" }, "weight": 1 },
+
+    { "id": "m1-checker-fails-incomplete", "describe": "check.sh exits non-zero on an incomplete worksheet (the template)",
+      "run": "bash labs/m1/check.sh labs/m1/decision-worksheet.md >/dev/null 2>&1 || echo CHECKER_EXIT_NONZERO",
+      "assert": { "contains": "CHECKER_EXIT_NONZERO" }, "weight": 2 },
+
+    { "id": "m1-checker-passes-complete", "describe": "check.sh reports PASS (exit 0) against the fully filled reference worksheet",
+      "run": "bash labs/m1/check.sh labs/m1/solutions.md",
+      "assert": { "contains": "RESULT: PASS" }, "weight": 3 },
+
+    { "id": "m1-solutions-eight-rows", "describe": "solutions.md answers all 8 scenarios in the same table format",
+      "run": "grep -Ec '^\\| *[1-8] *\\|' labs/m1/solutions.md",
+      "assert": { "matches": "^8$" }, "weight": 1 },
+
+    { "id": "m1-archmap-release-ladder", "describe": "the architecture map documents the 37-release ladder to v3.0",
+      "run": "cat labs/m1/architecture-map.md",
+      "assert": { "contains": "37 tagged releases" }, "weight": 1 },
+
+    { "id": "m1-archmap-has-diagram", "describe": "the architecture map carries the PlatformOps Mermaid diagram",
+      "run": "grep -c 'mermaid' labs/m1/architecture-map.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 }
+  ]
+}

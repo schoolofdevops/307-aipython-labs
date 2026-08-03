@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m1-dd-wordcount-runs", "describe": "the context-budget measurement (wc -w) runs against the lab markdown",
+      "run": "wc -w labs/m1/scenarios.md",
+      "assert": { "matches": "[0-9]" }, "weight": 1 },
+
+    { "id": "m1-dd-search-locates-contract", "describe": "agent-style narrow search finds the worksheet contract without reading whole files",
+      "run": "grep -rn 'Tool class' labs/m1 | head -5",
+      "assert": { "contains": "decision-worksheet.md" }, "weight": 2 },
+
+    { "id": "m1-dd-machine-signal", "describe": "check.sh yields the machine-readable pass signal (exit code 0) an agent loop converges on",
+      "run": "bash labs/m1/check.sh labs/m1/solutions.md >/dev/null 2>&1; echo \"exit code: $?\"",
+      "assert": { "contains": "exit code: 0" }, "weight": 2 }
+  ]
+}
