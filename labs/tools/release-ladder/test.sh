@@ -30,13 +30,16 @@ check() {
 }
 
 json_get() {
-  # json_get <json-string> <dotted.path>
+  # json_get <json-string> <dotted.path>  (numeric segments index into lists)
   python3 -c '
 import json, sys
 data = json.loads(sys.argv[1])
 path = sys.argv[2].split(".")
 for key in path:
-    data = data[key]
+    if isinstance(data, list):
+        data = data[int(key)]
+    else:
+        data = data[key]
 print(data if data is not None else "")
 ' "$1" "$2"
 }
@@ -241,6 +244,49 @@ else
   echo "  FAIL  inventory.report.stderr_snippet missing expected error text (got [$INV_STDERR])"
   FAIL=$((FAIL + 1))
 fi
+
+echo
+echo "-- stage 4a: still a single inventory.py -- module_map empty state --"
+STATE4A=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE4A" module_map.package_exists)" "False" "module_map.package_exists == False before Module 4"
+check "$(json_get "$STATE4A" module_map.old_single_file_exists)" "True" "module_map.old_single_file_exists == True (still a single file)"
+
+echo
+echo "-- stage 4b: Module 4 refactor -- inventory.py becomes a package --"
+rm -f src/platformops/inventory.py
+mkdir -p src/platformops/inventory
+cat > src/platformops/inventory/__init__.py <<'EOF'
+"""Fixture inventory package (Module 4 refactor)."""
+EOF
+cat > src/platformops/inventory/data.py <<'EOF'
+def load_servers():
+    pass
+
+
+def parse_servers():
+    pass
+EOF
+cat > src/platformops/inventory/rules.py <<'EOF'
+def check_missing_owner():
+    pass
+EOF
+git add -A
+git commit -q -m "platformops v0.2 -- module map (fixture)"
+git tag v0.2
+
+STATE4B=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE4B" module_map.package_exists)" "True" "module_map.package_exists == True after Module 4 refactor"
+check "$(json_get "$STATE4B" module_map.old_single_file_exists)" "False" "module_map.old_single_file_exists == False (single file is gone)"
+check "$(json_get "$STATE4B" module_map.files.0.name)" "__init__.py" "module_map.files[0].name == __init__.py"
+check "$(json_get "$STATE4B" module_map.files.0.exists)" "True" "module_map.files[0].exists == True"
+check "$(json_get "$STATE4B" module_map.files.1.name)" "__main__.py" "module_map.files[1].name == __main__.py"
+check "$(json_get "$STATE4B" module_map.files.1.exists)" "False" "module_map.files[1].exists == False (not written yet)"
+check "$(json_get "$STATE4B" module_map.files.2.exists)" "True" "module_map.files[2] (data.py) exists == True"
+check "$(json_get "$STATE4B" module_map.files.2.line_count)" "6" "module_map.files[2] (data.py) line_count == 6"
+check "$(json_get "$STATE4B" module_map.files.2.def_count)" "2" "module_map.files[2] (data.py) def_count == 2"
+check "$(json_get "$STATE4B" module_map.files.3.def_count)" "1" "module_map.files[3] (rules.py) def_count == 1"
+check "$(json_get "$STATE4B" module_map.files.4.exists)" "False" "module_map.files[4] (summary.py) exists == False (not written yet)"
+check "$(json_get "$STATE4B" module_map.files.5.exists)" "False" "module_map.files[5] (report.py) exists == False (not written yet)"
 
 echo
 echo "== $PASS passed, $FAIL failed =="

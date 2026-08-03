@@ -18,7 +18,14 @@ per module — the live counterpart to the course simulators.
   and — if it exists — your real report, run live and shown word-for-word,
   plus a few quick numbers pulled out of it (total servers, total CPU, and
   so on) when that is easy to do safely.
-- **More lenses land in M4+:** the grey tab shows where future lenses will
+- **Module Map lens (M4):** the real shape of your
+  `src/platformops/inventory/` package once Module 4 splits the old
+  single-file reporter into one — a small file tree showing whether each of
+  the six expected files (`__init__.py`, `__main__.py`, `data.py`,
+  `rules.py`, `summary.py`, `report.py`) exists, how many lines it has, and
+  how many top-level functions it defines. Before you do that refactor, this
+  tab honestly shows you that it is still one file.
+- **More lenses land in M5+:** the grey tab shows where future lenses will
   appear as you move through the course. Each later module adds one more tab
   to this same page — this tool never gets rebuilt from scratch.
 
@@ -64,14 +71,18 @@ small JSON snapshot of what it reads directly off your machine:
 3. **Your inventory report (M3 only)** — once `src/platformops/inventory.py`
    exists, it actually runs it (`uv run python -m platformops.inventory`,
    with a 15-second time limit) and shows you the real output.
+4. **Your inventory package layout (M4 only)** — once
+   `src/platformops/inventory/` exists as a package, it reads the text of
+   each expected file (never imports or runs it) and reports its line count
+   and how many top-level functions it defines.
 
-Two lenses (Release Ladder, Project Foundation) are pure read-only: **never
-runs** `ruff`, `pytest` or `uv` — only files, tags and Git status, so
-refreshing those tabs is always fast and never changes anything in your
-project. The Inventory Reporter lens (M3) is the one deliberate exception:
-it runs your own report so it can show it to you honestly. This is the
-whole point of a *live* tool: it shows you the truth about your own
-environment, not a simulation of it.
+Three lenses (Release Ladder, Project Foundation, Module Map) are pure
+read-only: **never runs** `ruff`, `pytest` or `uv` — only files, tags and
+Git status, so refreshing those tabs is always fast and never changes
+anything in your project. The Inventory Reporter lens (M3) is the one
+deliberate exception: it runs your own report so it can show it to you
+honestly. This is the whole point of a *live* tool: it shows you the truth
+about your own environment, not a simulation of it.
 
 If `uv` is not on your PATH yet, or you have not run `uv sync` so there is
 no `.venv`, the Inventory Reporter lens quietly falls back to plain
@@ -87,6 +98,7 @@ each time it runs.
 | Release Ladder | base tool (from M2 on) | Your real position on the v0.0 → v3.0 ladder |
 | Project Foundation | M2 | Real facts about your `~/platformops` project folder |
 | Inventory Reporter | M3 | Whether `inventory.py` exists, its test files, and your real inventory report run live |
+| Module Map | M4 | Your real `src/platformops/inventory/` package layout — which of the six expected files exist, their line counts, and their top-level function counts |
 
 Every module from here can add one more tab to `index.html` — never a new
 tool, never a new file. If a future lens needs something your environment
@@ -113,6 +125,10 @@ tab and keep the rest of the page working, instead of showing a blank panel.
   `uv run python -m platformops.inventory` yourself in `~/platformops` to
   see the full error and fix it there; the tab will pick up the fix the
   next time it polls.
+- **Module Map tab says "still a single file"** — you have not done the
+  Module 4 refactor yet (splitting `inventory.py` into
+  `src/platformops/inventory/`). That is expected before Module 4; nothing
+  is broken.
 
 ## Testing this tool itself
 
@@ -120,7 +136,10 @@ tab and keep the rest of the page working, instead of showing a blank panel.
 starts the server against it, and checks the JSON at each step — then tags
 `v0.1` and checks again — then adds a tiny `src/platformops/inventory.py`
 fixture and checks that the Inventory Reporter lens goes from "not there
-yet" to a real, populated report. It cleans up after itself.
+yet" to a real, populated report — then replaces that single file with a
+`src/platformops/inventory/` package fixture and checks that the Module Map
+lens goes from the "still a single file" empty state to a populated file
+list with real line and def counts. It cleans up after itself.
 
 ```bash
 bash labs/tools/release-ladder/test.sh

@@ -2,18 +2,22 @@
 """Release Ladder — serve.py
 
 Shows the learner where they really are on the PlatformOps release ladder
-(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus two
+(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus three
 lenses: a Project Foundation panel (M2) with the real state of the
-learner's own `~/platformops` project, and an Inventory Reporter panel (M3)
+learner's own `~/platformops` project, an Inventory Reporter panel (M3)
 that actually runs the learner's own `src/platformops/inventory.py` and
-shows its real output.
+shows its real output, and a Module Map panel (M4) that shows the real
+package structure of `src/platformops/inventory/` once the M4 refactor
+splits the single file into a package.
 
 Zero third-party dependencies. Python 3 standard library only. Mostly
 read-only: it runs `git tag` / `git status` / `git rev-parse` (never a
 write command) and reads files on disk. The one exception is the M3 lens,
 which runs the learner's own `python -m platformops.inventory` (their v0.1
 report) so it can show the real report — it never runs ruff, pytest, or
-anything that installs or writes to their project.
+anything that installs or writes to their project. The M4 lens only reads
+file text (line counts, `def ` counts) — it never imports or executes the
+learner's package.
 
 Usage:
     python3 serve.py                        # uses ~/platformops (or $PLATFORMOPS_DIR)
@@ -420,6 +424,70 @@ def read_inventory(directory: str) -> dict:
     }
 
 
+MODULE_MAP_EXPECTED_FILES = [
+    "__init__.py",
+    "__main__.py",
+    "data.py",
+    "rules.py",
+    "summary.py",
+    "report.py",
+]
+
+DEF_LINE_RE = re.compile(r"^def\s+\w+\s*\(")
+
+
+def count_lines_and_defs(path: str) -> tuple[int, int] | None:
+    """Return (line_count, top_level_def_count) for a file, or None if it
+    cannot be read. Top-level defs are found with a simple regex match on
+    lines starting with `def ` (no indentation) — this never imports or
+    executes the learner's code, it only reads text.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()
+    except OSError:
+        return None
+    line_count = len(lines)
+    def_count = sum(1 for ln in lines if DEF_LINE_RE.match(ln))
+    return line_count, def_count
+
+
+def read_module_map(directory: str) -> dict:
+    """The M4 lens: the real package structure of `src/platformops/inventory/`
+    (the v0.2 refactor that splits the old single-file `inventory.py` into a
+    package). Read-only: only reads file text and directory listings, never
+    imports or executes learner code.
+    """
+    package_dir = os.path.join(directory, "src", "platformops", "inventory")
+    old_single_file = os.path.join(directory, "src", "platformops", "inventory.py")
+
+    package_exists = os.path.isdir(package_dir)
+    old_single_file_exists = os.path.isfile(old_single_file)
+
+    files_out = []
+    for name in MODULE_MAP_EXPECTED_FILES:
+        path = os.path.join(package_dir, name)
+        exists = package_exists and os.path.isfile(path)
+        line_count = None
+        def_count = None
+        if exists:
+            counts = count_lines_and_defs(path)
+            if counts is not None:
+                line_count, def_count = counts
+        files_out.append({
+            "name": name,
+            "exists": exists,
+            "line_count": line_count,
+            "def_count": def_count,
+        })
+
+    return {
+        "package_exists": package_exists,
+        "old_single_file_exists": old_single_file_exists,
+        "files": files_out,
+    }
+
+
 def build_ladder_state(tags_present: list[str]) -> dict:
     tag_set = set(tags_present)
     flat = flat_releases()
@@ -476,11 +544,13 @@ def build_state() -> dict:
     foundation = read_foundation(directory)
     ladder = build_ladder_state(foundation["git"]["tags"])
     inventory = read_inventory(directory)
+    module_map = read_module_map(directory)
     return {
         "platformops_dir": directory,
         "foundation": foundation,
         "ladder": ladder,
         "inventory": inventory,
+        "module_map": module_map,
     }
 
 

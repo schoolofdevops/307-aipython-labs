@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m4-dd-module-object-cached-in-sys-modules", "describe": "importing the same submodule twice returns the exact same cached module object -- import runs the file once (section 1)",
+      "run": "uv run --directory labs/platformops python3 -c \"import sys; import platformops.inventory.data as d1; import platformops.inventory.data as d2; print(d1 is d2); print('platformops.inventory.data' in sys.modules)\"",
+      "assert": { "contains": "True\nTrue" }, "weight": 2 },
+
+    { "id": "m4-dd-function-reports-its-real-defining-module", "describe": "a re-exported function still reports rules.py as its __module__ and source file -- __init__.py re-exports a reference, it does not move the code (section 3)",
+      "run": "uv run --directory labs/platformops python3 -c \"import inspect; from platformops.inventory import find_missing_owner; print(find_missing_owner.__module__); print(inspect.getsourcefile(find_missing_owner).endswith('rules.py'))\"",
+      "assert": { "contains": "platformops.inventory.rules\nTrue" }, "weight": 2 },
+
+    { "id": "m4-dd-running-a-package-file-directly-fails-relative-import", "describe": "python file.py on a file that uses relative imports fails -- only python -m platformops.inventory gives the package context those imports need (section 2)",
+      "run": "uv run --directory labs/platformops python3 src/platformops/inventory/report.py 2>&1",
+      "assert": { "contains": "attempted relative import with no known parent package" }, "weight": 2 }
+  ]
+}

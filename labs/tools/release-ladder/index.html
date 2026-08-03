@@ -110,6 +110,19 @@
   #invRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
     font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
     max-height:22rem;overflow:auto}
+
+  /* ---------- module map lens (M4) ---------- */
+  #modulemap dl{display:grid;grid-template-columns:14rem 1fr;gap:5px 10px;font-size:.86rem}
+  #modulemap dt{color:var(--faint)}
+  #modulemap dd{font-family:var(--mono)}
+  #mmEmpty{font-size:.9rem;color:var(--dim);line-height:1.5;padding:6px 2px}
+  #mmEmpty code{color:var(--txt)}
+  #mmTree{margin-top:8px}
+  #mmTree table{width:100%;border-collapse:collapse;font-size:.82rem}
+  #mmTree th{text-align:left;color:var(--faint);font-weight:600;font-size:.68rem;
+    text-transform:uppercase;letter-spacing:.5px;padding:4px 8px;border-bottom:1px solid var(--line2)}
+  #mmTree td{padding:4px 8px;font-family:var(--mono);border-bottom:1px solid var(--line2)}
+  #mmTree tr.missing td{color:var(--faint);opacity:.6}
 </style>
 </head>
 <body>
@@ -123,7 +136,8 @@
     <button class="tab active" data-view="ladder">Release Ladder</button>
     <button class="tab" data-view="foundation">Project Foundation (M2)</button>
     <button class="tab" data-view="inventory">Inventory Reporter (M3)</button>
-    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M4+</button>
+    <button class="tab" data-view="modulemap">Module Map (M4)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M5+</button>
   </div>
 
   <div id="viewLadder" class="view active">
@@ -194,6 +208,42 @@
       </div>
     </div>
   </div>
+
+  <div id="viewModuleMap" class="view">
+    <div class="panel" id="modulemap">
+      <h2>Your inventory package, right now</h2>
+      <dl>
+        <dt>Package folder present</dt><dd id="mmPackageExists">–</dd>
+        <dt>Old single-file inventory.py</dt><dd id="mmOldFileExists">–</dd>
+      </dl>
+
+      <div id="mmEmpty" style="display:none">
+        Your inventory reporter is still a single file
+        (<code>src/platformops/inventory.py</code>) — Module 4 splits this into a
+        package: <code>src/platformops/inventory/</code> with <code>__init__.py</code>,
+        <code>__main__.py</code>, <code>data.py</code>, <code>rules.py</code>,
+        <code>summary.py</code>, and <code>report.py</code>. Finish Module 4 to light
+        this tab up.
+      </div>
+
+      <div id="mmTree" style="display:none">
+        <table>
+          <thead>
+            <tr><th>File</th><th>Exists?</th><th>Lines</th><th>Top-level defs</th></tr>
+          </thead>
+          <tbody id="mmTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="note">
+        <b>What this shows:</b> the real file layout of your
+        <code>src/platformops/inventory/</code> package — which of the six expected
+        files exist, how many lines each has, and how many top-level
+        <code>def</code>s each one has. It only reads file text; it never imports
+        or runs your package.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -203,6 +253,7 @@
     ladder: document.getElementById('viewLadder'),
     foundation: document.getElementById('viewFoundation'),
     inventory: document.getElementById('viewInventory'),
+    modulemap: document.getElementById('viewModuleMap'),
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
@@ -369,6 +420,37 @@
       (report.stdout && report.stdout.trim()) ? report.stdout : '(no output captured)';
   }
 
+  function renderModuleMap(data){
+    const mm = data.module_map;
+    if (!mm) return;
+
+    document.getElementById('mmPackageExists').innerHTML = yesno(mm.package_exists);
+    document.getElementById('mmOldFileExists').innerHTML = yesno(mm.old_single_file_exists);
+
+    const emptyEl = document.getElementById('mmEmpty');
+    const treeEl = document.getElementById('mmTree');
+
+    if (!mm.package_exists){
+      emptyEl.style.display = 'block';
+      treeEl.style.display = 'none';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    treeEl.style.display = 'block';
+
+    const tbody = document.getElementById('mmTableBody');
+    tbody.innerHTML = '';
+    mm.files.forEach(f => {
+      const tr = document.createElement('tr');
+      tr.className = f.exists ? '' : 'missing';
+      tr.innerHTML = '<td>' + f.name + '</td>' +
+        '<td>' + yesno(f.exists) + '</td>' +
+        '<td>' + (f.exists ? f.line_count : '–') + '</td>' +
+        '<td>' + (f.exists ? f.def_count : '–') + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
   async function loadState(){
     try{
       const res = await fetch('/api/state', {cache: 'no-store'});
@@ -383,6 +465,7 @@
       renderLadder(data);
       renderFoundation(data);
       renderInventory(data);
+      renderModuleMap(data);
     }catch(e){
       setConn(false);
     }
