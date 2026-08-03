@@ -1,6 +1,6 @@
 [project]
 name = "platformops"
-version = "0.0.0"
+version = "0.1.0"
 description = "PlatformOps Toolkit — inspect, validate and troubleshoot your services from one command line"
 readme = "README.md"
 requires-python = ">=3.12"

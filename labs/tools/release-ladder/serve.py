@@ -2,13 +2,18 @@
 """Release Ladder — serve.py
 
 Shows the learner where they really are on the PlatformOps release ladder
-(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus the
-first "lens": a Project Foundation panel with the real state of the
-learner's own `~/platformops` project.
+(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus two
+lenses: a Project Foundation panel (M2) with the real state of the
+learner's own `~/platformops` project, and an Inventory Reporter panel (M3)
+that actually runs the learner's own `src/platformops/inventory.py` and
+shows its real output.
 
-Zero third-party dependencies. Python 3 standard library only. Read-only:
-it only runs `git tag` / `git status` / `git rev-parse` (never a write
-command) and reads files on disk. It never runs ruff, pytest or uv.
+Zero third-party dependencies. Python 3 standard library only. Mostly
+read-only: it runs `git tag` / `git status` / `git rev-parse` (never a
+write command) and reads files on disk. The one exception is the M3 lens,
+which runs the learner's own `python -m platformops.inventory` (their v0.1
+report) so it can show the real report — it never runs ruff, pytest, or
+anything that installs or writes to their project.
 
 Usage:
     python3 serve.py                        # uses ~/platformops (or $PLATFORMOPS_DIR)
@@ -25,6 +30,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -264,6 +270,156 @@ def read_foundation(directory: str) -> dict:
     }
 
 
+INVENTORY_TIMEOUT_SECS = 15
+STDERR_SNIPPET_MAX_CHARS = 400
+
+
+def find_inventory_tests(directory: str) -> int:
+    """Count test files for the inventory module (e.g. tests/test_inventory.py).
+
+    Matches `tests/test_inventory*.py` so small naming variants still count.
+    """
+    if not os.path.isdir(directory):
+        return 0
+    return len(glob.glob(os.path.join(directory, "tests", "test_inventory*.py")))
+
+
+def run_inventory_report(directory: str) -> dict:
+    """Run `python -m platformops.inventory` inside `directory` and capture
+    its output. Read-only from this tool's point of view: it runs the
+    learner's own module, never edits anything.
+
+    Tries `uv run python -m platformops.inventory` first (the normal way a
+    learner runs their project). If `uv` is not on PATH, or the project has
+    no `.venv` yet, it falls back to plain `python3 -m platformops.inventory`
+    with `PYTHONPATH` pointed at the project's `src/` folder — this lets the
+    lens work even before the learner has run `uv sync`, and it needs no
+    network access.
+    """
+    uv_path = shutil.which("uv")
+    venv_exists = os.path.isdir(os.path.join(directory, ".venv"))
+
+    env = None
+    if uv_path and venv_exists:
+        cmd = [uv_path, "run", "python", "-m", "platformops.inventory"]
+        command_label = "uv run python -m platformops.inventory"
+    else:
+        cmd = [sys.executable, "-m", "platformops.inventory"]
+        command_label = (
+            "python3 -m platformops.inventory  (fallback: uv or .venv not found, "
+            "using PYTHONPATH=src)"
+        )
+        env = dict(os.environ)
+        src_dir = os.path.join(directory, "src")
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = src_dir + (os.pathsep + existing if existing else "")
+
+    result = {
+        "attempted": True,
+        "command": command_label,
+        "ok": False,
+        "exit_code": None,
+        "timed_out": False,
+        "stdout": "",
+        "stderr_snippet": None,
+        "error": None,
+    }
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=INVENTORY_TIMEOUT_SECS,
+            env=env,
+        )
+        result["exit_code"] = proc.returncode
+        result["ok"] = proc.returncode == 0
+        result["stdout"] = proc.stdout or ""
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            result["stderr_snippet"] = stderr[:STDERR_SNIPPET_MAX_CHARS]
+    except subprocess.TimeoutExpired:
+        result["timed_out"] = True
+        result["error"] = (
+            f"The command took longer than {INVENTORY_TIMEOUT_SECS}s and was stopped."
+        )
+    except OSError as exc:
+        result["error"] = f"Could not run the command ({exc})."
+
+    return result
+
+
+def parse_inventory_quick_facts(stdout: str) -> dict | None:
+    """Best-effort, defensive parse of a few headline numbers out of the
+    report text. Returns None if nothing recognizable was found. This never
+    raises: if the report format changes, the raw text is still shown as-is
+    by the caller regardless of what this function returns.
+    """
+    if not stdout or not stdout.strip():
+        return None
+
+    facts: dict = {}
+    try:
+        m = re.search(r"(?m)^Total servers:\s*(\d+)", stdout)
+        if m:
+            facts["total_servers"] = int(m.group(1))
+
+        m = re.search(r"(?m)^\s*Total CPU \(cores\):\s*(\d+)", stdout)
+        if m:
+            facts["total_cpu"] = int(m.group(1))
+
+        m = re.search(r"(?m)^\s*Total memory \(GB\):\s*(\d+)", stdout)
+        if m:
+            facts["total_memory_gb"] = int(m.group(1))
+
+        sec = re.search(r"Missing owner tag:\s*\n((?:.*\n)*?)\n", stdout)
+        if sec:
+            lines = [ln for ln in sec.group(1).splitlines() if ln.strip().startswith("-")]
+            facts["missing_owner_count"] = len(lines)
+
+        sec = re.search(r"low memory[^\n]*:\s*\n((?:.*\n)*?)\n", stdout)
+        if sec:
+            lines = [ln for ln in sec.group(1).splitlines() if ln.strip().startswith("-")]
+            facts["low_memory_prod_count"] = len(lines)
+    except Exception:  # noqa: BLE001 - parsing is a bonus, never fatal
+        pass
+
+    return facts or None
+
+
+def read_inventory(directory: str) -> dict:
+    """The M3 lens: real facts about the learner's `src/platformops/inventory.py`.
+
+    If the file does not exist yet, nothing is run — the lens just reports
+    that and waits. If it exists, this actually runs the learner's own
+    report (see `run_inventory_report`) and shows it verbatim, plus a few
+    quick facts parsed out of it when that is cheap and safe to do.
+    """
+    module_path = os.path.join(directory, "src", "platformops", "inventory.py")
+    module_exists = os.path.isfile(module_path)
+    test_file_count = find_inventory_tests(directory)
+
+    if not module_exists:
+        return {
+            "module_exists": False,
+            "test_file_count": test_file_count,
+            "report": None,
+            "quick_facts": None,
+        }
+
+    report = run_inventory_report(directory)
+    quick_facts = parse_inventory_quick_facts(report["stdout"]) if report["ok"] else None
+
+    return {
+        "module_exists": True,
+        "test_file_count": test_file_count,
+        "report": report,
+        "quick_facts": quick_facts,
+    }
+
+
 def build_ladder_state(tags_present: list[str]) -> dict:
     tag_set = set(tags_present)
     flat = flat_releases()
@@ -319,10 +475,12 @@ def build_state() -> dict:
     directory = get_platformops_dir()
     foundation = read_foundation(directory)
     ladder = build_ladder_state(foundation["git"]["tags"])
+    inventory = read_inventory(directory)
     return {
         "platformops_dir": directory,
         "foundation": foundation,
         "ladder": ladder,
+        "inventory": inventory,
     }
 
 

@@ -13,7 +13,12 @@ per module — the live counterpart to the course simulators.
   project folder — latest Git tag, the version written in `pyproject.toml`,
   whether `.venv` exists, whether Ruff is configured, how many test files you
   have, and which of the key project files are present.
-- **More lenses land in M3+:** the grey tab shows where future lenses will
+- **Inventory Reporter lens (M3):** whether you have written
+  `src/platformops/inventory.py` yet, how many test files you have for it,
+  and — if it exists — your real report, run live and shown word-for-word,
+  plus a few quick numbers pulled out of it (total servers, total CPU, and
+  so on) when that is easy to do safely.
+- **More lenses land in M4+:** the grey tab shows where future lenses will
   appear as you move through the course. Each later module adds one more tab
   to this same page — this tool never gets rebuilt from scratch.
 
@@ -48,7 +53,7 @@ Press `Ctrl-C` to stop it. No install step, no dependencies — just Python 3
 This is a single Python file using only the standard library
 (`http.server`). It serves one page (`index.html`, all CSS and JS inline —
 no external files, no CDN, no build step) and answers `/api/state` with a
-small JSON snapshot of two things it reads directly off your machine:
+small JSON snapshot of what it reads directly off your machine:
 
 1. **Your Git tags** — it runs `git -C ~/platformops tag` (plus `status` and
    `rev-parse`, all read-only, never a write) and matches what it finds
@@ -56,11 +61,24 @@ small JSON snapshot of two things it reads directly off your machine:
 2. **Your project files** — it reads `pyproject.toml` for your version
    number and Ruff config, and checks which files exist (`.venv`, `uv.lock`,
    `tests/`, and so on).
+3. **Your inventory report (M3 only)** — once `src/platformops/inventory.py`
+   exists, it actually runs it (`uv run python -m platformops.inventory`,
+   with a 15-second time limit) and shows you the real output.
 
-It deliberately **never runs** `ruff`, `pytest` or `uv` itself — only files,
-tags and Git status, so refreshing the page is always fast and never changes
-anything in your project. This is the whole point of a *live* tool: it shows
-you the truth about your own environment, not a simulation of it.
+Two lenses (Release Ladder, Project Foundation) are pure read-only: **never
+runs** `ruff`, `pytest` or `uv` — only files, tags and Git status, so
+refreshing those tabs is always fast and never changes anything in your
+project. The Inventory Reporter lens (M3) is the one deliberate exception:
+it runs your own report so it can show it to you honestly. This is the
+whole point of a *live* tool: it shows you the truth about your own
+environment, not a simulation of it.
+
+If `uv` is not on your PATH yet, or you have not run `uv sync` so there is
+no `.venv`, the Inventory Reporter lens quietly falls back to plain
+`python3 -m platformops.inventory` with `PYTHONPATH` pointed at your
+project's `src/` folder — so the report still works even at that early
+stage. You do not need to do anything for this; the server figures it out
+each time it runs.
 
 ## Lenses so far
 
@@ -68,6 +86,7 @@ you the truth about your own environment, not a simulation of it.
 |---|---|---|
 | Release Ladder | base tool (from M2 on) | Your real position on the v0.0 → v3.0 ladder |
 | Project Foundation | M2 | Real facts about your `~/platformops` project folder |
+| Inventory Reporter | M3 | Whether `inventory.py` exists, its test files, and your real inventory report run live |
 
 Every module from here can add one more tab to `index.html` — never a new
 tool, never a new file. If a future lens needs something your environment
@@ -86,12 +105,22 @@ tab and keep the rest of the page working, instead of showing a blank panel.
 - **"server not reachable" in the top-right corner** — the server stopped or
   crashed; check the terminal where you ran `serve.py` for the error, then
   restart it.
+- **Inventory Reporter tab says "finish Module 3 to light this up"** — you
+  have not written `src/platformops/inventory.py` yet. That is expected
+  before Module 3; nothing is broken.
+- **Inventory Reporter tab shows "failed" with a stderr snippet** — your
+  `inventory.py` raised an error when run directly. Run
+  `uv run python -m platformops.inventory` yourself in `~/platformops` to
+  see the full error and fix it there; the tab will pick up the fix the
+  next time it polls.
 
 ## Testing this tool itself
 
 `test.sh` builds a small fake project in a scratch folder, tags it `v0.0`,
 starts the server against it, and checks the JSON at each step — then tags
-`v0.1` and checks again. It cleans up after itself.
+`v0.1` and checks again — then adds a tiny `src/platformops/inventory.py`
+fixture and checks that the Inventory Reporter lens goes from "not there
+yet" to a real, populated report. It cleans up after itself.
 
 ```bash
 bash labs/tools/release-ladder/test.sh

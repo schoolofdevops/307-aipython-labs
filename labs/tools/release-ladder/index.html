@@ -90,6 +90,26 @@
   #note{margin-top:2px;font-size:.72rem;line-height:1.4;color:var(--faint)}
   #note b{color:var(--dim)}
   #err{color:var(--bad);font-family:var(--mono);font-size:.8rem}
+
+  /* ---------- inventory lens (M3) ---------- */
+  #inventory dl{display:grid;grid-template-columns:11rem 1fr;gap:5px 10px;font-size:.86rem}
+  #inventory dt{color:var(--faint)}
+  #inventory dd{font-family:var(--mono)}
+  #invEmpty{font-size:.9rem;color:var(--dim);line-height:1.5;padding:6px 2px}
+  #invEmpty b{color:var(--txt)}
+  #invQuickFacts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .factchip{border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+    padding:6px 10px;font-family:var(--mono);min-width:8.5rem}
+  .factchip b{display:block;color:var(--accent);font-size:1.05rem}
+  .factchip span{display:block;color:var(--faint);font-size:.7rem;margin-top:1px}
+  #invErr{white-space:pre-wrap;color:var(--bad);font-family:var(--mono);font-size:.78rem;
+    margin-top:6px;line-height:1.4}
+  #invRawWrap{margin-top:8px}
+  #invRawWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #invRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
+    max-height:22rem;overflow:auto}
 </style>
 </head>
 <body>
@@ -102,7 +122,8 @@
   <div id="tabs">
     <button class="tab active" data-view="ladder">Release Ladder</button>
     <button class="tab" data-view="foundation">Project Foundation (M2)</button>
-    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M3+</button>
+    <button class="tab" data-view="inventory">Inventory Reporter (M3)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M4+</button>
   </div>
 
   <div id="viewLadder" class="view active">
@@ -131,12 +152,58 @@
       </div>
     </div>
   </div>
+
+  <div id="viewInventory" class="view">
+    <div class="panel" id="inventory">
+      <h2>Your inventory report, right now</h2>
+      <dl>
+        <dt>inventory.py file</dt><dd id="invModuleExists">–</dd>
+        <dt>Test files for it</dt><dd id="invTestCount">–</dd>
+      </dl>
+
+      <div id="invEmpty" style="display:none">
+        You have not written <code>src/platformops/inventory.py</code> yet — finish
+        Module 3 to light this up. Once the file exists, this tab will actually run it
+        and show you its real report.
+      </div>
+
+      <div id="invRun" style="display:none">
+        <dl style="margin-top:8px">
+          <dt>Command run</dt><dd id="invCommand">–</dd>
+          <dt>Result</dt><dd id="invStatus">–</dd>
+        </dl>
+
+        <div id="invQuickFacts"></div>
+        <div id="invErr"></div>
+
+        <div id="invRawWrap">
+          <h2>Raw report output</h2>
+          <pre id="invRaw"></pre>
+        </div>
+      </div>
+
+      <div id="note">
+        <b>What this shows:</b> this is the only lens on this page that runs anything —
+        it runs your own <code>python -m platformops.inventory</code> inside your
+        project (with a 15-second time limit) and shows exactly what it printed. It
+        tries <code>uv run</code> first, the same way you run it yourself; if <code>uv</code>
+        or your <code>.venv</code> is not there yet, it quietly falls back to plain
+        <code>python3</code> with your project's <code>src/</code> folder added to the
+        Python path, so this still works even before you have run <code>uv sync</code>.
+        Read-only either way — it never writes to your project.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 (function(){
   const tabs = document.querySelectorAll('.tab[data-view]');
-  const views = { ladder: document.getElementById('viewLadder'), foundation: document.getElementById('viewFoundation') };
+  const views = {
+    ladder: document.getElementById('viewLadder'),
+    foundation: document.getElementById('viewFoundation'),
+    inventory: document.getElementById('viewInventory'),
+  };
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
     t.classList.add('active');
@@ -232,6 +299,76 @@
     });
   }
 
+  function renderInventory(data){
+    const inv = data.inventory;
+    if (!inv) return;
+
+    document.getElementById('invModuleExists').innerHTML = yesno(inv.module_exists);
+    document.getElementById('invTestCount').textContent = String(inv.test_file_count);
+
+    const emptyEl = document.getElementById('invEmpty');
+    const runEl = document.getElementById('invRun');
+
+    if (!inv.module_exists){
+      emptyEl.style.display = 'block';
+      runEl.style.display = 'none';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    runEl.style.display = 'block';
+
+    const report = inv.report || {};
+    document.getElementById('invCommand').textContent = report.command || '(not run)';
+
+    let statusHtml;
+    if (report.timed_out){
+      statusHtml = '<span class="no">timed out</span>';
+    } else if (report.error && report.exit_code === null){
+      statusHtml = '<span class="no">could not run</span>';
+    } else if (report.ok){
+      statusHtml = '<span class="yes">ran fine (exit 0)</span>';
+    } else {
+      statusHtml = '<span class="no">failed (exit ' + report.exit_code + ')</span>';
+    }
+    document.getElementById('invStatus').innerHTML = statusHtml;
+
+    const errBox = document.getElementById('invErr');
+    if (!report.ok){
+      const parts = [];
+      if (report.timed_out) parts.push(report.error);
+      else if (report.error) parts.push(report.error);
+      if (report.stderr_snippet) parts.push('What Python said (stderr):\n' + report.stderr_snippet);
+      parts.push('Hint: run it yourself — "uv run python -m platformops.inventory" inside ' +
+        '~/platformops — to see the full error and fix it there.');
+      errBox.textContent = parts.join('\n\n');
+    } else {
+      errBox.textContent = '';
+    }
+
+    const grid = document.getElementById('invQuickFacts');
+    grid.innerHTML = '';
+    const qf = inv.quick_facts;
+    if (qf){
+      const rows = [
+        ['total_servers', 'Total servers'],
+        ['total_cpu', 'Total CPU (cores)'],
+        ['total_memory_gb', 'Total memory (GB)'],
+        ['missing_owner_count', 'Servers missing an owner tag'],
+        ['low_memory_prod_count', 'Prod servers low on memory'],
+      ];
+      rows.forEach(([key, label]) => {
+        if (!(key in qf)) return;
+        const chip = document.createElement('div');
+        chip.className = 'factchip';
+        chip.innerHTML = '<b>' + qf[key] + '</b><span>' + label + '</span>';
+        grid.appendChild(chip);
+      });
+    }
+
+    document.getElementById('invRaw').textContent =
+      (report.stdout && report.stdout.trim()) ? report.stdout : '(no output captured)';
+  }
+
   async function loadState(){
     try{
       const res = await fetch('/api/state', {cache: 'no-store'});
@@ -245,6 +382,7 @@
       setConn(true);
       renderLadder(data);
       renderFoundation(data);
+      renderInventory(data);
     }catch(e){
       setConn(false);
     }

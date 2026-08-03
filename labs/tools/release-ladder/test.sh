@@ -57,6 +57,24 @@ echo "test dir : $TEST_DIR"
 echo "port     : $PORT"
 echo
 
+# The Inventory Reporter lens (M3) tries `uv run` first and only falls back
+# to plain python3 when `uv` is not on PATH (or there is no `.venv` yet).
+# To make this test deterministic and network-free everywhere (CI, a
+# learner's machine with or without uv installed), we strip every PATH
+# directory that has a `uv` executable in it for the server process below
+# (there can be more than one, e.g. a pyenv shim AND a real install). This
+# forces the server down its documented fallback path — PYTHONPATH=src +
+# plain python3 — the same path a learner without uv/.venv yet would exercise.
+SERVER_PATH="$PATH"
+IFS=':' read -ra _PATH_DIRS <<< "$PATH"
+_KEEP_DIRS=()
+for _d in "${_PATH_DIRS[@]}"; do
+  if [ ! -x "$_d/uv" ]; then
+    _KEEP_DIRS+=("$_d")
+  fi
+done
+SERVER_PATH="$(IFS=:; echo "${_KEEP_DIRS[*]}")"
+
 rm -rf "$TEST_DIR"
 mkdir -p "$TEST_DIR/src/platformops" "$TEST_DIR/tests"
 cd "$TEST_DIR"
@@ -84,7 +102,7 @@ git commit -q -m "platformops v0.0 -- project foundation"
 git tag v0.0
 
 echo "-- starting server against fake project --"
-PLATFORMOPS_DIR="$TEST_DIR" PORT="$PORT" python3 "$TOOL_DIR/serve.py" >/tmp/release-ladder-test.log 2>&1 &
+PATH="$SERVER_PATH" PLATFORMOPS_DIR="$TEST_DIR" PORT="$PORT" python3 "$TOOL_DIR/serve.py" >/tmp/release-ladder-test.log 2>&1 &
 SERVER_PID=$!
 
 ready=0
@@ -126,6 +144,103 @@ check "$(json_get "$STATE2" ladder.current_version)" "v0.1" "ladder.current_vers
 check "$(json_get "$STATE2" ladder.next_version)" "v0.2" "ladder.next_version == v0.2 after tagging"
 check "$(json_get "$STATE2" ladder.reached_count)" "2" "ladder.reached_count == 2"
 check "$(json_get "$STATE2" foundation.venv_exists)" "True" "foundation.venv_exists == True after .venv appears"
+
+echo
+echo "-- stage 3a: no inventory.py yet -- empty state --"
+STATE3A=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE3A" inventory.module_exists)" "False" "inventory.module_exists == False before Module 3"
+check "$(json_get "$STATE3A" inventory.report)" "" "inventory.report is null before Module 3"
+check "$(json_get "$STATE3A" inventory.quick_facts)" "" "inventory.quick_facts is null before Module 3"
+
+echo
+echo "-- stage 3b: inventory.py lands (M3), no uv/network needed --"
+mkdir -p tests
+cat > src/platformops/inventory.py <<'EOF'
+"""Tiny fixture inventory reporter -- stands in for the learner's real v0.1
+module so test.sh can exercise the Inventory Reporter lens without uv or
+network access.
+"""
+
+
+def print_report():
+    print("PlatformOps Inventory Report")
+    print("=============================")
+    print("Total servers: 3")
+    print()
+    print("Servers by environment:")
+    print("  prod: 2")
+    print("  dev: 1")
+    print()
+    print("Missing owner tag:")
+    print("  - fixture-02")
+    print()
+    print("Prod servers with low memory (< 8GB):")
+    print("  (none)")
+    print()
+    print("Summary:")
+    print("  Total CPU (cores): 12")
+    print("  Total memory (GB): 48")
+
+
+if __name__ == "__main__":
+    print_report()
+EOF
+
+cat > tests/test_inventory.py <<'EOF'
+def test_placeholder():
+    assert True
+EOF
+
+git add -A
+git commit -q -m "platformops v0.2 (fixture) -- inventory reporter lands"
+
+STATE3B=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE3B" inventory.module_exists)" "True" "inventory.module_exists == True once inventory.py exists"
+check "$(json_get "$STATE3B" inventory.test_file_count)" "1" "inventory.test_file_count == 1"
+check "$(json_get "$STATE3B" inventory.report.ok)" "True" "inventory.report.ok == True (command ran fine)"
+check "$(json_get "$STATE3B" inventory.quick_facts.total_servers)" "3" "inventory.quick_facts.total_servers == 3"
+check "$(json_get "$STATE3B" inventory.quick_facts.total_cpu)" "12" "inventory.quick_facts.total_cpu == 12"
+check "$(json_get "$STATE3B" inventory.quick_facts.missing_owner_count)" "1" "inventory.quick_facts.missing_owner_count == 1"
+
+INV_CMD="$(json_get "$STATE3B" inventory.report.command)"
+if printf '%s' "$INV_CMD" | grep -q "fallback"; then
+  echo "  OK    inventory.report.command used the documented uv-absent fallback"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  inventory.report.command did not use the fallback (got [$INV_CMD])"
+  FAIL=$((FAIL + 1))
+fi
+
+INV_STDOUT="$(json_get "$STATE3B" inventory.report.stdout)"
+if printf '%s' "$INV_STDOUT" | grep -q "PlatformOps Inventory Report"; then
+  echo "  OK    inventory.report.stdout contains the raw report text"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  inventory.report.stdout missing raw report text"
+  FAIL=$((FAIL + 1))
+fi
+
+echo
+echo "-- stage 3c: inventory.py errors out -- graceful failure --"
+cat > src/platformops/inventory.py <<'EOF'
+"""Fixture that fails on purpose, to exercise the graceful-failure path."""
+
+if __name__ == "__main__":
+    raise RuntimeError("fixture: broken inventory report")
+EOF
+
+STATE3C=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE3C" inventory.report.ok)" "False" "inventory.report.ok == False when the command errors"
+check "$(json_get "$STATE3C" inventory.quick_facts)" "" "inventory.quick_facts is null when the command errors"
+
+INV_STDERR="$(json_get "$STATE3C" inventory.report.stderr_snippet)"
+if printf '%s' "$INV_STDERR" | grep -q "fixture: broken inventory report"; then
+  echo "  OK    inventory.report.stderr_snippet captures the real error"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  inventory.report.stderr_snippet missing expected error text (got [$INV_STDERR])"
+  FAIL=$((FAIL + 1))
+fi
 
 echo
 echo "== $PASS passed, $FAIL failed =="

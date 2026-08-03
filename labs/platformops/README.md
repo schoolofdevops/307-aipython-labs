@@ -3,7 +3,7 @@
 A Python operational toolkit for DevOps, platform engineering and SRE work. You are
 building it module by module in *AI-Powered Python for DevOps, Platform Engineering & SRE*.
 
-Current release: **v0.0 — Project Foundation**.
+Current release: **v0.1 — Infrastructure Inventory Reporter**.
 
 ## Quick start
 
