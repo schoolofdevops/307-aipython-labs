@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m2-dd-lockfile-bigger-than-pyproject", "describe": "uv.lock (transitive pins) is substantially larger than pyproject.toml (direct deps only)",
+      "run": "cd labs/platformops && wc -l < uv.lock",
+      "assert": { "matches": "^\\s*[1-9][0-9]+\\s*$" }, "weight": 1 },
+
+    { "id": "m2-dd-venv-python-is-a-link-to-uvs-toolchain", "describe": ".venv/bin/python is a symlink into uv's own managed interpreter store, not a private copy",
+      "run": "cd labs/platformops && uv sync >/dev/null 2>&1; readlink .venv/bin/python",
+      "assert": { "contains": "uv/python" }, "weight": 2 },
+
+    { "id": "m2-dd-locked-sync-passes-on-a-clean-checkpoint", "describe": "uv sync --locked succeeds against the checked-in lockfile (the CI drift check, green when nothing has drifted)",
+      "run": "cd labs/platformops && uv sync --locked >/dev/null 2>&1; echo \"exit code: $?\"",
+      "assert": { "contains": "exit code: 0" }, "weight": 2 }
+  ]
+}

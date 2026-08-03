@@ -1,9 +1,9 @@
 # PlatformOps Toolkit — Architecture Map and Release Ladder
 
-This is the end-state of the project you build across this course: **PlatformOps v3.0**, a
-Python operational toolkit that inspects, validates and troubleshoots services across source
-control, CI/CD, AWS (via Floci, locally) and Kubernetes (via kind, locally). Keep this file
-open as the course progresses — every module adds one block to this picture.
+This shows the end state of the project you build across this course: **PlatformOps v3.0**.
+It is a Python operational toolkit that checks, validates and troubleshoots services across
+source control, CI/CD, AWS (through Floci, locally) and Kubernetes (through kind, locally).
+Keep this file open as the course goes on. Every module adds one block to this picture.
 
 ## The map
 
@@ -30,14 +30,15 @@ flowchart LR
   CORE --> OBS
 ```
 
-Three rules the whole course enforces:
+Three rules the whole course sticks to:
 
-1. **One core, many interfaces.** Domain logic lives once, in the tested core library. The
-   CLI, the API and the agent tools are thin layers over the same functions.
-2. **Adapters isolate the outside world.** AWS, Kubernetes, source control and observability
-   are reached through adapters — swap Floci for real AWS without touching the core.
-3. **Reads are free, writes are governed.** Anything that mutates goes through plan →
-   approve → execute → audit. Agents get read-only tools by default.
+1. **One core, many doors in.** The main logic lives in one place, the tested core library.
+   The CLI, the API and the agent tools are just thin layers over the same functions.
+2. **Adapters keep the outside world separate.** You reach AWS, Kubernetes, source control
+   and observability (monitoring and logging) through adapters, so you can swap Floci for
+   real AWS without touching the core.
+3. **Reading is free, writing is controlled.** Anything that changes something goes through
+   plan, approve, execute, then audit. Agents get read-only tools by default.
 
 ## The release ladder — 37 tagged releases, v0.0 → v3.0
 
@@ -48,12 +49,13 @@ Three rules the whole course enforces:
 | Governed operations | v2.0 – v2.13 (14) | M25–M38 | Approved-only remediation, release readiness, containerized CLI, Kubernetes inspector, incident context collector, internal API, MCP server, guardrails |
 | Complete toolkit | v3.0 (1) | M39 | The capstone: all capabilities integrated and demonstrated end-to-end |
 
-Small, frequent releases are the point: every module leaves the toolkit in a shippable,
-tagged state — the same discipline you apply to production services.
+Small, frequent releases are the whole point. Every module leaves the toolkit in a
+shippable, tagged state. This is the same discipline you would apply to a real production
+service.
 
 ## Annotate the map (3 prompts)
 
-Answer inline, right here in this file. There is no checker for this section — it is your
+Answer right here, inline in this file. There is no checker for this section. It is your
 own reference for the rest of the course.
 
 1. **Which of the three interfaces would each scenario-8 consumer use?** (The on-call
@@ -61,12 +63,12 @@ own reference for the rest of the course.
 
    > Your answer:
 
-2. **Where on the map does scenario 5 (bucket cleanup) live — which interface and which
+2. **Where on the map does scenario 5 (bucket cleanup) live? Which interface, and which
    adapter?**
 
    > Your answer:
 
 3. **Which release phase makes agents useful, and why does it come *after* testing and
-   quality gates rather than before?**
+   quality checks rather than before?**
 
    > Your answer:

@@ -1,19 +1,19 @@
 # M1 — Eight Requirements from a Real Platform Team
 
-Read each requirement as if it landed in your team's backlog this sprint. For every one, you
-will pick the **smallest tool class that solves it well** and record your reasoning in
-`decision-worksheet.md`. There is no trick: some of these should NOT be Python.
+Read each requirement as if it landed in your team's backlog this sprint. For each one, pick
+the **smallest tool class that solves it well** and write your reasoning in
+`decision-worksheet.md`. There is no trick here: some of these should NOT be Python.
 
 Tool classes to choose from:
 
-- **Bash one-liner / Bash script** — glue, one-off text processing, wrapping existing CLIs
-- **Python script** — structured data, API calls, more than ~30 lines of logic
-- **Python CLI** — a script other people run, with flags, help and exit codes
-- **Python service (API)** — other systems call it over HTTP, it stays running
-- **Scheduled job (worker)** — a script or CLI run on a schedule (cron / CI / CronJob)
-- **Controller / operator** — watches state continuously and reconciles it
-- **Existing tool + config** — Terraform, Ansible, a policy engine; you write config, not code
-- **Agent tool** — a capability exposed to a coding/ops agent, with a human approving actions
+- **Bash one-liner / Bash script**: glue and one-off text processing, wrapping existing CLIs
+- **Python script**: structured data, API calls, more than about 30 lines of logic
+- **Python CLI**: a script other people run, with flags, help text and exit codes
+- **Python service (API)**: other systems call it over HTTP, and it stays running
+- **Scheduled job (worker)**: a script or CLI run on a schedule (cron, CI, or a Kubernetes CronJob)
+- **Controller / operator**: watches the current state all the time and fixes it
+- **Existing tool + config**: Terraform, Ansible, a policy engine — you write configuration, not code
+- **Agent tool**: a capability exposed to a coding or ops agent, with a human approving actions
 
 ---
 
@@ -25,15 +25,15 @@ should run this by hand.
 
 ## Scenario 2 — One-off 502 count from a log bundle
 
-During an incident review you are handed a 4 GB directory of ALB access logs and asked one
-question: how many 502 responses hit the checkout listener yesterday, per hour? You need the
-answer this afternoon and will likely never run this again.
+During an incident review you are handed a 4 GB folder of ALB (load balancer) access logs and
+asked one question: how many 502 responses hit the checkout listener yesterday, per hour? You
+need the answer this afternoon, and you will most likely never run this again.
 
 ## Scenario 3 — Service inventory over HTTP
 
-Three teams (FinOps, security, and the internal developer portal) want to query "which
-services exist, who owns them, what account and namespace are they in" — live, over HTTP,
-from their own tooling. The data comes from several sources and changes daily.
+Three teams (FinOps, security, and the internal developer portal) want to ask "which
+services exist, who owns them, and which account and namespace are they in", live, over
+HTTP, from their own tools. The data comes from several sources and changes every day.
 
 ## Scenario 4 — Block Pods without resource limits
 
@@ -56,13 +56,13 @@ must be reviewable before anything is created.
 ## Scenario 7 — Security-group drift detection
 
 Your VPCs and security groups are managed in Terraform, but engineers sometimes "fix"
-security groups by hand during incidents. You need to detect — daily — when live security
-groups differ from what the code declares, and alert the owning team. Detection only: no
-auto-repair.
+security groups by hand during incidents. You need to detect, every day, when the live
+security groups differ from what the code says they should be, and alert the team that owns
+them. Detection only, no automatic repair.
 
 ## Scenario 8 — Incident context in one place
 
 Every time the payments service pages, the responder spends the first 15 minutes collecting
 the same facts: recent deploys, Kubernetes events, current alerts, and who owns what. You
-want that collected automatically into one report the moment an incident starts — and
-eventually you want an ops agent to be able to request it too.
+want that collected automatically into one report the moment an incident starts. And
+eventually, you want an ops agent to be able to request it too.

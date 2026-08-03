@@ -1,0 +1,47 @@
+{
+  "checks": [
+    { "id": "m2-checkpoint-files-present", "describe": "the platformops v0.0 checkpoint has pyproject, lock, src, tests, README, .gitignore and .python-version",
+      "run": "ls labs/platformops/pyproject.toml labs/platformops/uv.lock labs/platformops/src/platformops/__init__.py labs/platformops/tests/test_foundation.py labs/platformops/README.md labs/platformops/.gitignore labs/platformops/.python-version",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m2-checkpoint-no-venv-committed", "describe": "the checkpoint does not ship a committed .venv (rebuilt from uv.lock instead)",
+      "run": "test -d labs/platformops/.venv && echo PRESENT || echo ABSENT",
+      "assert": { "contains": "ABSENT" }, "weight": 2 },
+
+    { "id": "m2-checkpoint-gitignore-excludes-venv", "describe": ".gitignore excludes .venv",
+      "run": "grep -c '\\.venv' labs/platformops/.gitignore",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m2-checkpoint-python-pinned-3-12", "describe": "the checkpoint pins Python 3.12",
+      "run": "cat labs/platformops/.python-version",
+      "assert": { "matches": "^3\\.12$" }, "weight": 1 },
+
+    { "id": "m2-checkpoint-version-string-in-code", "describe": "src/platformops/__init__.py carries the v0.0.0 version string",
+      "run": "grep -c '__version__ = \"0.0.0\"' labs/platformops/src/platformops/__init__.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m2-checkpoint-version-string-in-pyproject", "describe": "pyproject.toml's own version matches the v0.0 release",
+      "run": "grep -c 'version = \"0.0.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m2-checkpoint-two-tests-defined", "describe": "test_foundation.py defines both foundation tests",
+      "run": "grep -c '^def test_' labs/platformops/tests/test_foundation.py",
+      "assert": { "matches": "^2$" }, "weight": 1 },
+
+    { "id": "m2-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint (the first quality gate)",
+      "run": "cd labs/platformops && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m2-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/platformops && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m2-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint (the second quality gate)",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1",
+      "assert": { "contains": "2 passed" }, "weight": 3 },
+
+    { "id": "m2-checkpoint-about-returns-tagline", "describe": "about() returns a string naming the toolkit and the current version",
+      "run": "cd labs/platformops && uv run python -c \"from platformops import about; print(about())\"",
+      "assert": { "contains": "PlatformOps Toolkit v0.0.0" }, "weight": 2 }
+  ]
+}

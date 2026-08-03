@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Release Ladder — PlatformOps</title>
+<style>
+  :root{
+    --bg:#0d1220; --panel:#151c2e; --panel2:#111827; --line:#26324e; --line2:#1c2740;
+    --txt:#dbe4f5; --dim:#8494b3; --faint:#5a6a8c;
+    --accent:#4cc9f0; --accent2:#7b6cf6;
+    --ok:#3ddc97; --warn:#f5b942; --bad:#ff6b6b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:clamp(10.5px,0.4vw + 9.1px,16px);color-scheme:dark}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:1rem/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100%;
+  }
+  #app{display:flex;flex-direction:column;min-height:100%;padding:10px 12px;gap:8px;max-width:1100px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:0 0 auto}
+  header h1{font-size:1.1rem;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+  header h1 .lad{color:var(--accent)}
+  #conn{margin-left:auto;font-family:var(--mono);font-size:.78rem;color:var(--faint);
+    display:flex;align-items:center;gap:6px;white-space:nowrap}
+  #conn .dot{width:.55rem;height:.55rem;border-radius:50%;background:var(--faint);display:inline-block}
+  #conn.live .dot{background:var(--ok);box-shadow:0 0 6px rgba(61,220,151,.6)}
+  #conn.down .dot{background:var(--bad)}
+
+  /* ---------- tabs ---------- */
+  #tabs{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto;border-bottom:1px solid var(--line2);padding-bottom:6px}
+  .tab{background:none;border:1px solid var(--line);color:var(--dim);border-radius:7px 7px 0 0;
+    padding:6px 12px;font-size:.86rem;cursor:pointer;font-weight:600}
+  .tab:hover:not(.disabled){color:var(--txt);border-color:var(--faint)}
+  .tab.active{color:var(--accent);border-color:var(--accent);background:rgba(76,201,240,.08)}
+  .tab.disabled{cursor:default;opacity:.45}
+
+  .view{display:none;flex:1 1 auto;min-height:0;flex-direction:column;gap:8px}
+  .view.active{display:flex}
+
+  .panel{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px 14px}
+  .panel h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+
+  /* ---------- ladder summary ---------- */
+  #summary{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+  #summary .stat{font-family:var(--mono)}
+  #summary .stat b{color:var(--accent);font-size:1.1rem}
+  #summary .stat span{color:var(--faint);font-size:.78rem;display:block}
+
+  /* ---------- ladder parts ---------- */
+  #ladderList{display:flex;flex-direction:column;gap:8px}
+  .part{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px}
+  .part h3{font-size:.86rem;font-weight:650;display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .part h3 .pnum{font-family:var(--mono);color:var(--accent2);font-size:.78rem}
+  .part h3 .pmods{margin-left:auto;font-family:var(--mono);color:var(--faint);font-size:.72rem}
+  .rungs{display:flex;flex-wrap:wrap;gap:6px}
+  .rung{border:1px solid var(--line);border-radius:7px;background:var(--panel2);
+    padding:4px 9px;font-size:.78rem;display:flex;flex-direction:column;gap:1px;min-width:8.5rem}
+  .rung .rver{font-family:var(--mono);font-weight:700;color:var(--faint)}
+  .rung .rtitle{color:var(--dim);font-size:.72rem;line-height:1.25}
+  .rung .rmod{font-family:var(--mono);font-size:.66rem;color:var(--faint)}
+  .rung.reached{border-color:var(--ok);background:rgba(61,220,151,.09)}
+  .rung.reached .rver{color:var(--ok)}
+  .rung.current{border-color:var(--accent);background:rgba(76,201,240,.14);
+    box-shadow:0 0 0 1px rgba(76,201,240,.35)}
+  .rung.current .rver{color:var(--accent)}
+  .rung.current .rtitle{color:var(--txt)}
+  .rung.next{border-style:dashed;border-color:var(--accent2)}
+  .rung.next .rver{color:var(--accent2)}
+  .rung.upcoming{opacity:.5}
+  .noRelease{color:var(--faint);font-size:.78rem;font-style:italic}
+
+  /* ---------- foundation lens ---------- */
+  #foundation dl{display:grid;grid-template-columns:11rem 1fr;gap:5px 10px;font-size:.86rem}
+  #foundation dt{color:var(--faint)}
+  #foundation dd{font-family:var(--mono)}
+  .yes{color:var(--ok)} .no{color:var(--bad)} .maybe{color:var(--warn)}
+  #filesGrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .filechip{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;color:var(--dim)}
+  .filechip.present{border-color:var(--ok);color:var(--ok)}
+  .filechip.missing{border-color:var(--line);color:var(--faint);opacity:.6}
+
+  #note{margin-top:2px;font-size:.72rem;line-height:1.4;color:var(--faint)}
+  #note b{color:var(--dim)}
+  #err{color:var(--bad);font-family:var(--mono);font-size:.8rem}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1><span class="lad">Release</span> Ladder</h1>
+    <div id="conn"><span class="dot"></span><span id="connTxt">connecting…</span></div>
+  </header>
+
+  <div id="tabs">
+    <button class="tab active" data-view="ladder">Release Ladder</button>
+    <button class="tab" data-view="foundation">Project Foundation (M2)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M3+</button>
+  </div>
+
+  <div id="viewLadder" class="view active">
+    <div class="panel">
+      <h2>Where you are</h2>
+      <div id="summary">
+        <div class="stat"><b id="curVer">–</b><span id="curTitle">reading…</span></div>
+        <div class="stat"><b id="reachedCount">0/37</b><span>releases reached</span></div>
+        <div class="stat"><b id="nextVer">–</b><span id="nextTitle">next release</span></div>
+      </div>
+    </div>
+    <div id="ladderList"></div>
+    <div id="err"></div>
+  </div>
+
+  <div id="viewFoundation" class="view">
+    <div class="panel" id="foundation">
+      <h2>Your ~/platformops project, right now</h2>
+      <dl id="foundationFacts"></dl>
+      <div id="filesGrid"></div>
+      <div id="note">
+        <b>What this shows:</b> real facts read straight from your project folder and your Git
+        tags — nothing here is simulated. It never runs <code>ruff</code>, <code>pytest</code> or
+        <code>uv</code>; it only reads files and asks Git for tags and status, so it stays fast
+        and safe to leave open while you work.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const tabs = document.querySelectorAll('.tab[data-view]');
+  const views = { ladder: document.getElementById('viewLadder'), foundation: document.getElementById('viewFoundation') };
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    Object.values(views).forEach(v => v.classList.remove('active'));
+    views[t.dataset.view].classList.add('active');
+  }));
+
+  const connEl = document.getElementById('conn');
+  const connTxt = document.getElementById('connTxt');
+  const errEl = document.getElementById('err');
+
+  function setConn(ok){
+    connEl.classList.toggle('live', ok);
+    connEl.classList.toggle('down', !ok);
+    connTxt.textContent = ok ? 'live' : 'server not reachable';
+  }
+
+  function renderLadder(data){
+    const ladder = data.ladder;
+    document.getElementById('curVer').textContent = ladder.current_version || 'not started';
+    document.getElementById('curTitle').textContent = ladder.current_title || 'no release tagged yet';
+    document.getElementById('reachedCount').textContent = ladder.reached_count + '/' + ladder.total_releases;
+    document.getElementById('nextVer').textContent = ladder.next_version || '—';
+    document.getElementById('nextTitle').textContent = ladder.next_title || 'you finished the ladder!';
+
+    const list = document.getElementById('ladderList');
+    list.innerHTML = '';
+    ladder.parts.forEach(part => {
+      const div = document.createElement('div');
+      div.className = 'part';
+      const h3 = document.createElement('h3');
+      h3.innerHTML = '<span class="pnum">Part ' + part.part + '</span> ' + part.title +
+        '<span class="pmods">' + part.modules + '</span>';
+      div.appendChild(h3);
+
+      if (!part.releases.length){
+        const p = document.createElement('div');
+        p.className = 'noRelease';
+        p.textContent = 'No tagged release in this part — orientation only.';
+        div.appendChild(p);
+      } else {
+        const rungs = document.createElement('div');
+        rungs.className = 'rungs';
+        part.releases.forEach(r => {
+          const chip = document.createElement('div');
+          chip.className = 'rung ' + r.status;
+          chip.innerHTML = '<span class="rver">' + r.version + '</span>' +
+            '<span class="rtitle">' + r.title + '</span>' +
+            '<span class="rmod">' + r.module + '</span>';
+          rungs.appendChild(chip);
+        });
+        div.appendChild(rungs);
+      }
+      list.appendChild(div);
+    });
+  }
+
+  function yesno(v, unknownText){
+    if (v === true) return '<span class="yes">yes</span>';
+    if (v === false) return '<span class="no">no</span>';
+    return '<span class="maybe">' + (unknownText || 'unknown') + '</span>';
+  }
+
+  function renderFoundation(data){
+    const f = data.foundation;
+    const dl = document.getElementById('foundationFacts');
+    const rows = [];
+    rows.push(['Project folder', f.path]);
+    rows.push(['Folder exists', yesno(f.exists)]);
+    rows.push(['Git repository', yesno(f.git.is_repo)]);
+    rows.push(['Latest tag', f.latest_tag || '(no tags yet)']);
+    rows.push(['All tags', (f.git.tags && f.git.tags.length) ? f.git.tags.join(', ') : '(none)']);
+    rows.push(['Uncommitted changes', f.git.dirty === null ? '<span class="maybe">unknown</span>' : yesno(f.git.dirty)]);
+    rows.push(['pyproject.toml version', (f.pyproject.found && f.pyproject.version) ? f.pyproject.version : '(not found)']);
+    rows.push(['Ruff configured in pyproject', yesno(f.pyproject.ruff_configured)]);
+    rows.push(['.venv exists', yesno(f.venv_exists)]);
+    rows.push(['Test files in tests/', String(f.test_file_count)]);
+
+    dl.innerHTML = '';
+    rows.forEach(([label, value]) => {
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd'); dd.innerHTML = value;
+      dl.appendChild(dt); dl.appendChild(dd);
+    });
+
+    const grid = document.getElementById('filesGrid');
+    grid.innerHTML = '';
+    Object.entries(f.key_files).forEach(([name, present]) => {
+      const chip = document.createElement('span');
+      chip.className = 'filechip ' + (present ? 'present' : 'missing');
+      chip.textContent = name;
+      grid.appendChild(chip);
+    });
+  }
+
+  async function loadState(){
+    try{
+      const res = await fetch('/api/state', {cache: 'no-store'});
+      const data = await res.json();
+      if (data.error){
+        errEl.textContent = 'Server error: ' + data.error;
+        setConn(false);
+        return;
+      }
+      errEl.textContent = '';
+      setConn(true);
+      renderLadder(data);
+      renderFoundation(data);
+    }catch(e){
+      setConn(false);
+    }
+  }
+
+  loadState();
+  setInterval(loadState, 4000);
+})();
+</script>
+</body>
+</html>
