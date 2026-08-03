@@ -5,7 +5,7 @@
       "assert": { "matches": "[0-9]" }, "weight": 1 },
 
     { "id": "m1-dd-search-locates-contract", "describe": "agent-style narrow search finds the worksheet contract without reading whole files",
-      "run": "grep -rn 'Tool class' labs/m1 | head -5",
+      "run": "cd labs/m1 && grep -rn 'Tool class' *.md | head -5",
       "assert": { "contains": "decision-worksheet.md" }, "weight": 2 },
 
     { "id": "m1-dd-machine-signal", "describe": "check.sh yields the machine-readable pass signal (exit code 0) an agent loop converges on",
