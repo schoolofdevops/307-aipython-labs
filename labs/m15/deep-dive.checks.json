@@ -1,0 +1,83 @@
+{
+  "checks": [
+    { "id": "m15-dd-file-exists", "describe": "deep-dive.md exists for M15",
+      "run": "test -f site/docs/m15-coding-agent-harness/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m15-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "grep -c 'mermaid' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "bash -c \"grep -c '\\*\\*Use it when:\\*\\*' site/docs/m15-coding-agent-harness/deep-dive.md\"",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m15-dd-no-unfilled-placeholders", "describe": "all expected output blocks have been folded with real captured output",
+      "run": "bash -c \"grep -c '<expected output' site/docs/m15-coding-agent-harness/deep-dive.md || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m15-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m15-dd-covers-token-cost", "describe": "deep dive covers the size / attention cost of a harness file",
+      "run": "bash -c \"grep -c -i 'context\\|skim' site/docs/m15-coding-agent-harness/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-dd-covers-override-order", "describe": "deep dive names global CLAUDE.md, project CLAUDE.md and settings.json in the override discussion",
+      "run": "bash -c \"grep -c '.claude/settings.json' site/docs/m15-coding-agent-harness/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m15-dd-covers-testing-the-harness", "describe": "deep dive covers testing the harness itself via a hash/diff-style comparison",
+      "run": "grep -c 'shasum' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m15-dd-covers-agents-md-portability", "describe": "deep dive shows the AGENTS.md symlink technique for cross-agent portability",
+      "run": "grep -c 'ln -s CLAUDE.md AGENTS.md' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-dd-covers-verify-script-bug", "describe": "deep dive applies the M14 verification-gap idea to a bug in verify.sh itself",
+      "run": "grep -c 'pipefail' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m15-dd-uses-scratch-copy-for-destructive-work", "describe": "the verify-script-bug demonstration runs in a scratch copy, not the real project",
+      "run": "grep -c '/tmp/m15-dd-scratch' site/docs/m15-coding-agent-harness/deep-dive.md",
+      "assert": { "matches": "^[4-9]" }, "weight": 1 },
+
+    { "id": "m15-dd-agents-md-symlink-created", "describe": "the AGENTS.md symlink from Section 4 is a real, permanent addition to the live project",
+      "run": "bash -c \"test -L labs/platformops/AGENTS.md && echo symlink || echo missing\"",
+      "assert": { "contains": "symlink" }, "weight": 3 },
+
+    { "id": "m15-dd-agents-md-points-at-claude-md", "describe": "AGENTS.md resolves to the same content as CLAUDE.md",
+      "run": "bash -c \"cd labs/platformops && diff <(cat AGENTS.md) <(cat CLAUDE.md) > /dev/null && echo identical || echo different\"",
+      "assert": { "contains": "identical" }, "weight": 2 },
+
+    { "id": "m15-dd-scratch-not-left-behind", "describe": "teardown removed the scratch copy -- no leftover state on the shared runner",
+      "run": "bash -c \"test -d /tmp/m15-dd-scratch && echo present || echo absent\"",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m15-dd-real-project-untouched-by-scratch-work", "describe": "the real project's test suite still passes -- the deliberately-broken test in Section 5 only ever existed in the scratch copy",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m15-dd-real-verify-script-still-intact", "describe": "the real verify.sh still has set -euo pipefail -- Section 5's sed edit only ever ran against the scratch copy",
+      "run": "grep -c 'set -euo pipefail' labs/platformops/scripts/verify.sh",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

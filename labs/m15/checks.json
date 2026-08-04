@@ -1,0 +1,119 @@
+{
+  "checks": [
+    { "id": "m15-claude-md-exists", "describe": "CLAUDE.md exists at the project root",
+      "run": "test -f labs/platformops/CLAUDE.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m15-claude-md-has-approved-commands", "describe": "CLAUDE.md carries the Approved commands section",
+      "run": "grep -c '^## Approved commands$' labs/platformops/CLAUDE.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-claude-md-has-safety-rules", "describe": "CLAUDE.md carries the Safety rules section",
+      "run": "grep -c '^## Safety rules$' labs/platformops/CLAUDE.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-claude-md-has-definition-of-done", "describe": "CLAUDE.md carries the Definition of done section",
+      "run": "grep -c '^## Definition of done$' labs/platformops/CLAUDE.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-claude-md-names-uv-run-commands", "describe": "the Approved commands section names exact uv-run commands, not vague instructions",
+      "run": "bash -c \"grep -c 'uv run' labs/platformops/CLAUDE.md\"",
+      "assert": { "matches": "^[3-9]|^[1-9][0-9]" }, "weight": 1 },
+
+    { "id": "m15-claude-md-safety-rules-mention-uv-lock", "describe": "Safety rules explicitly protect uv.lock",
+      "run": "grep -c 'uv.lock' labs/platformops/CLAUDE.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m15-verify-script-exists", "describe": "scripts/verify.sh exists",
+      "run": "test -f labs/platformops/scripts/verify.sh && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m15-verify-script-executable", "describe": "scripts/verify.sh is executable",
+      "run": "bash -c \"test -x labs/platformops/scripts/verify.sh && echo executable || echo not-executable\"",
+      "assert": { "contains": "executable" }, "weight": 2 },
+
+    { "id": "m15-verify-script-runs-clean", "describe": "scripts/verify.sh actually runs against the live project and exits 0",
+      "run": "cd labs/platformops && ./scripts/verify.sh",
+      "assert": { "exit": 0 }, "weight": 4 },
+
+    { "id": "m15-verify-script-is-the-renamed-check-gates", "describe": "verify.sh carries check-gates.sh's original checks (lint, format, types, tests, secret scan, dependency audit), not a rewritten subset",
+      "run": "bash -c \"grep -c -E 'ruff check|ruff format|mypy|pytest|check-secrets|check-deps' labs/platformops/scripts/verify.sh\"",
+      "assert": { "matches": "^[6-9]$|^[1-9][0-9]$" }, "weight": 2 },
+
+    { "id": "m15-check-gates-renamed-not-duplicated", "describe": "check-gates.sh was renamed away, not left in place alongside verify.sh -- one canonical verify script",
+      "run": "bash -c \"test -f labs/platformops/scripts/check-gates.sh && echo present || echo absent\"",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m15-pyproject-version-1-2-0", "describe": "pyproject.toml carries the v1.2.0 release version",
+      "run": "grep -c 'version = \"1.2.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-changelog-has-1-2-0-entry", "describe": "CHANGELOG.md's newest entry documents the 1.2.0 harness release",
+      "run": "grep -c '\\[1.2.0\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m15-changelog-still-has-prior-history", "describe": "CHANGELOG.md keeps prior releases -- this module adds an entry, it does not recreate the file",
+      "run": "grep -c '\\[1.1.0\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m15-cli-still-passes-help", "describe": "the CLI still runs after the harness and release work -- no regression from Phase 1",
+      "run": "cd labs/platformops && uv run platformops --help",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m15-version-command-reports-1-2-0", "describe": "platformops version reports the new release",
+      "run": "cd labs/platformops && uv run platformops version",
+      "assert": { "contains": "1.2.0" }, "weight": 2 },
+
+    { "id": "m15-version-json-flag-implemented", "describe": "Phase 2: the agent-delegated version --json flag exists and returns valid JSON with a version key",
+      "run": "cd labs/platformops && uv run platformops version --json",
+      "assert": { "contains": "\"version\"" }, "weight": 3 },
+
+    { "id": "m15-version-json-has-python-key", "describe": "Phase 2: version --json output names the running Python interpreter",
+      "run": "cd labs/platformops && uv run platformops version --json",
+      "assert": { "contains": "\"python\"" }, "weight": 2 },
+
+    { "id": "m15-version-plain-text-unchanged", "describe": "Phase 2: plain platformops version (no flag) still prints the original plain-text format, not JSON",
+      "run": "cd labs/platformops && uv run platformops version",
+      "assert": { "contains": "platformops 1.2.0" }, "weight": 2 },
+
+    { "id": "m15-no-needless-dependency-added", "describe": "safety rule held: no needless HTTP or web-framework dependency was added while implementing version --json",
+      "run": "bash -c \"grep -c -E 'flask|requests' labs/platformops/pyproject.toml || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m15-checkpoint-v1-1-regression-safe", "describe": "regression: the frozen v1.1 checkpoint this module started from still passes its own tests, untouched",
+      "run": "bash -c \"cd labs/checkpoints/v1.1 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m15-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m15-coding-agent-harness/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-lesson-covers-five-components", "describe": "the lesson names all five harness components",
+      "run": "bash -c \"grep -c -i 'project context\\|approved commands\\|safety rules\\|verification script\\|definition of done' site/docs/m15-coding-agent-harness/lesson.md\"",
+      "assert": { "matches": "^[5-9]|^[1-9][0-9]" }, "weight": 1 },
+
+    { "id": "m15-lesson-covers-portability", "describe": "the lesson discusses harness portability across agents (AGENTS.md / Codex)",
+      "run": "bash -c \"grep -c -i 'AGENTS.md\\|Codex' site/docs/m15-coding-agent-harness/lesson.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -c -i 'common pitfalls' site/docs/m15-coding-agent-harness/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-lab-has-two-phases", "describe": "lab.md has both Phase 1 and Phase 2",
+      "run": "bash -c \"grep -c '## Phase [12]' site/docs/m15-coding-agent-harness/lab.md\"",
+      "assert": { "matches": "^2$" }, "weight": 1 },
+
+    { "id": "m15-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.2 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.2' site/docs/m15-coding-agent-harness/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m15-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m15-coding-agent-harness/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m15-lab-does-not-claim-to-create-changelog", "describe": "lab.md treats CHANGELOG.md as an existing file to append to, never as something newly created",
+      "run": "bash -c \"grep -c -i 'create.*CHANGELOG.md\\|CHANGELOG.md.*does not exist' site/docs/m15-coding-agent-harness/lab.md || true\"",
+      "assert": { "matches": "^0$" }, "weight": 1 }
+  ]
+}
