@@ -17,6 +17,9 @@ use the matching folder here instead.
 - `v0.3/` — end of Module 5 (Service Definition Model)
 - `v0.4/` — end of Module 6 (Service Configuration Validator)
 - `v0.5/` — end of Module 7 (Reliable Validation and Diagnostics)
+- `v0.6/` — end of Module 8 (PlatformOps CLI)
+- `v0.7/` — end of Module 9 (Repository and API Inspector)
+- `v0.8/` — end of Module 10 (Concurrent Health Checker)
 
 (More folders are added as later modules ship.)
 
@@ -92,6 +95,8 @@ table lists every such case so far:
 |---|---|
 | v0.1 → v0.2 | `rm src/platformops/inventory.py` (split into a package) |
 | every other step so far | nothing — each later release only adds files |
+| v0.6 → v0.7 | nothing — Module 9 only adds `httpclient.py` |
+| v0.7 → v0.8 | nothing — Module 10 only adds async functions to existing files |
 
 You can always verify this yourself before copying: `diff -rq
 ~/307-aipython-labs/labs/checkpoints/v0.2 ~/307-aipython-labs/labs/checkpoints/v0.3` lists

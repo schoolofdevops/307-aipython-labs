@@ -1,0 +1,95 @@
+{
+  "checks": [
+    { "id": "m11-checkpoint-version-0-9", "describe": "pyproject.toml carries the v0.9.0 release version",
+      "run": "grep -c 'version = \"0.9.0\"' labs/checkpoints/v0.9/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m11-checkpoint-readme-names-v0-9", "describe": "README.md names the v0.9 release",
+      "run": "grep -c 'v0.9' labs/checkpoints/v0.9/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m11-checkpoint-prior-modules-present", "describe": "all prior module source files still present, including the new local_ops.py",
+      "run": "ls labs/checkpoints/v0.9/src/platformops/cli.py labs/checkpoints/v0.9/src/platformops/config.py labs/checkpoints/v0.9/src/platformops/diagnostics.py labs/checkpoints/v0.9/src/platformops/servicedef.py labs/checkpoints/v0.9/src/platformops/httpclient.py labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m11-checkpoint-four-runtime-dependencies", "describe": "still exactly four runtime dependencies -- subprocess is standard library, no new dependency needed",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v0.9/pyproject.toml','rb')); print(len(d['project']['dependencies']))\"",
+      "assert": { "matches": "^4$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-ruff-check", "describe": "ruff check passes",
+      "run": "cd labs/checkpoints/v0.9 && uv run ruff check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m11-checkpoint-ruff-format", "describe": "ruff format is clean",
+      "run": "cd labs/checkpoints/v0.9 && uv run ruff format --check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m11-checkpoint-pytest", "describe": "pytest passes",
+      "run": "cd labs/checkpoints/v0.9 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "matches": "passed" }, "weight": 3 },
+
+    { "id": "m11-checkpoint-help-lists-local-status", "describe": "--help lists the local-status command",
+      "run": "cd labs/checkpoints/v0.9 && uv run platformops --help",
+      "assert": { "contains": "local-status" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-help-lists-check-security", "describe": "--help lists the check-security command",
+      "run": "cd labs/checkpoints/v0.9 && uv run platformops --help",
+      "assert": { "contains": "check-security" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-git-status-exists", "describe": "git_status function exists in local_ops.py",
+      "run": "grep -c 'def git_status' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-git-log-exists", "describe": "git_log function exists in local_ops.py",
+      "run": "grep -c 'def git_log' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-docker-info-exists", "describe": "docker_info function exists in local_ops.py",
+      "run": "grep -c 'def docker_info' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-container-list-exists", "describe": "container_list function exists in local_ops.py (Phase 2)",
+      "run": "grep -c 'def container_list' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-git-status-result-dataclass", "describe": "GitStatusResult dataclass exists",
+      "run": "grep -c 'class GitStatusResult' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m11-checkpoint-no-shell-true-anywhere-in-src", "describe": "shell=True never appears anywhere under src/",
+      "run": "bash -c \"grep -rn 'shell=True' labs/checkpoints/v0.9/src/ | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m11-checkpoint-every-subprocess-run-has-a-timeout", "describe": "every subprocess.run( call in local_ops.py includes a timeout argument in the same call",
+      "run": "python3 -c \"import re; text = open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); calls = re.findall(r'subprocess\\.run\\([^)]*\\)', text, re.S); missing = [c for c in calls if 'timeout' not in c]; print(len(missing))\"",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m11-checkpoint-subprocess-run-call-count", "describe": "local_ops.py has at least four subprocess.run( call sites (git_status, git_log, docker_info, container_list)",
+      "run": "grep -c 'subprocess.run(' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^[4-9]" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-container-list-parses-per-line", "describe": "container_list parses docker ps output with json.loads, evidence of newline-delimited handling",
+      "run": "grep -c 'json.loads' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-docker-info-catches-file-not-found", "describe": "docker_info (and friends) handle a missing binary gracefully via FileNotFoundError",
+      "run": "grep -c 'FileNotFoundError' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-scan-for-shell-true-exists", "describe": "scan_for_shell_true function exists for the check-security command",
+      "run": "grep -c 'def scan_for_shell_true' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-local-status-runs-and-exits-0", "describe": "local-status runs against the checkpoint itself and exits 0",
+      "run": "cd labs/checkpoints/v0.9 && uv run platformops --quiet local-status --json; echo \"exit: $?\"",
+      "assert": { "contains": "exit: 0" }, "weight": 2 },
+
+    { "id": "m11-checkpoint-check-security-clean-exit-0", "describe": "check-security against the checkpoint's own (clean) src/ exits 0",
+      "run": "cd labs/checkpoints/v0.9 && uv run platformops check-security; echo \"exit: $?\"",
+      "assert": { "contains": "exit: 0" }, "weight": 3 },
+
+    { "id": "m11-checkpoint-git-status-porcelain-flag", "describe": "git_status uses the stable --porcelain output format, not plain git status",
+      "run": "grep -c -- '--porcelain' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 }
+  ]
+}

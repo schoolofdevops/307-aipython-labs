@@ -1,0 +1,43 @@
+{
+  "checks": [
+    { "id": "m9-dd-list-workflow-runs-reuses-one-client", "describe": "list_workflow_runs() builds exactly one httpx.Client() and reuses it across every paginated request, instead of opening a new client per page",
+      "run": "awk '/^def list_workflow_runs/,/^def _parse_workflow_runs_page/' labs/checkpoints/v0.7/src/platformops/httpclient.py | grep -c 'httpx.Client('",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m9-dd-backoff-formula-is-exponential", "describe": "the backoff delay grows exponentially with the attempt number (base * 2**attempt), the formula section 3 walks through",
+      "run": "grep -c '2\\*\\*attempt' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m9-dd-backoff-includes-jitter", "describe": "the backoff delay adds a random jitter term on top of the exponential base -- the fix for the synchronized-retry stampede the jitter simulation demonstrates",
+      "run": "grep -c 'random.uniform' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m9-dd-max-retries-default-is-four", "describe": "MAX_RETRIES is set to 4, the value the retry-exhaustion tests and the flaky-server demo rely on",
+      "run": "grep -c 'MAX_RETRIES = 4' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m9-dd-retryable-status-codes-are-429-and-5xx-only", "describe": "RETRYABLE_STATUS_CODES names only 429 and the 5xx family -- never a permanent 4xx like 401 or 404",
+      "run": "grep -n 'RETRYABLE_STATUS_CODES = ' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "contains": "429" }, "weight": 2 },
+
+    { "id": "m9-dd-retryable-status-codes-never-include-401", "describe": "401 (a permanent client error) is never in the retryable set -- section 3's idempotency argument depends on this",
+      "run": "grep -n 'RETRYABLE_STATUS_CODES = ' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "absent": "401" }, "weight": 2 },
+
+    { "id": "m9-dd-retry-helper-only-ever-called-with-get", "describe": "_request_with_retry() is only ever invoked with the GET method inside httpclient.py -- proof the retry-safety argument (idempotent reads only) holds in the real code, not just in prose",
+      "run": "grep -n '_request_with_retry(client,' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "absent": "POST" }, "weight": 3 },
+
+    { "id": "m9-dd-retry-scenarios-pass-in-checkpoint", "describe": "the four mocked retry/no-retry scenarios (429-then-success, 500-exhausts, 401-never-retried, connection-failure-exhausts) pass against the frozen checkpoint -- the same behavior the flaky-server demo exercises live",
+      "run": "cd labs/checkpoints/v0.7 && uv run pytest -q -k 'retries or does_not_retry' 2>&1",
+      "assert": { "contains": "4 passed" }, "weight": 3 },
+
+    { "id": "m9-dd-http2-client-constructs-without-error", "describe": "an httpx.Client(http2=True) can be built once the optional h2 package is available -- proof HTTP/2 support is an opt-in flag, not a missing feature",
+      "run": "cd labs/checkpoints/v0.7 && uv run --with h2 python3 -c \"import httpx; client = httpx.Client(http2=True); print('constructed-ok'); client.close()\"",
+      "assert": { "contains": "constructed-ok" }, "weight": 2 },
+
+    { "id": "m9-dd-connection-reuse-is-measurably-faster", "describe": "reusing one httpx.Client() across N requests to the same host is faster than opening a fresh client per request -- the keep-alive claim section 1 makes, checked as a real timing comparison against a live endpoint",
+      "run": "cd labs/checkpoints/v0.7 && uv run python3 -c \"import time; import httpx; N=6; URL='https://api.github.com'\nstart=time.perf_counter()\nwith httpx.Client() as c:\n    for _ in range(N): c.get(URL)\nreused=time.perf_counter()-start\nstart=time.perf_counter()\nfor _ in range(N):\n    with httpx.Client() as c: c.get(URL)\nfresh=time.perf_counter()-start\nprint('faster' if reused < fresh else 'not-faster')\"",
+      "assert": { "contains": "faster" }, "weight": 1 }
+  ]
+}

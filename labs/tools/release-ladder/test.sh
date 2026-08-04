@@ -530,5 +530,127 @@ kill "$ENV_SERVER_PID" 2>/dev/null || true
 wait "$ENV_SERVER_PID" 2>/dev/null || true
 
 echo
+echo "-- stage 7a: no diagnostics.py yet -- empty state --"
+STATE7A=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE7A" diagnostics.module_exists)" "False" "diagnostics.module_exists == False before Module 7"
+check "$(json_get "$STATE7A" diagnostics.test_file_count)" "0" "diagnostics.test_file_count == 0 before Module 7"
+check "$(json_get "$STATE7A" diagnostics.config_error_subclasses)" "[]" "diagnostics.config_error_subclasses == [] before Module 7"
+check "$(json_get "$STATE7A" diagnostics.demo)" "" "diagnostics.demo is null before Module 7"
+
+echo
+echo "-- stage 7b: diagnostics.py lands (M7), no pydantic, no uv/network needed --"
+cat > src/platformops/diagnostics.py <<'EOF'
+"""Tiny fixture diagnostics module -- stands in for the learner's real v0.5
+module so test.sh can exercise the Diagnostics lens without pydantic, uv or
+network access. Deliberately stdlib-only (no `import yaml`) so it also runs
+fine under the fallback path's `-S` flag.
+
+Declares two ConfigError subclasses, the way Module 7's typed
+validation-failure hierarchy does, so the lens's defensive regex parse has
+something real to find.
+"""
+
+import sys
+
+
+class ConfigError(Exception):
+    """Base class for the typed validation-failure hierarchy (fixture)."""
+
+
+class MissingFieldError(ConfigError):
+    """Raised when a required field is absent (fixture)."""
+
+
+class InvalidPatternError(ConfigError):
+    """Raised when a field fails its pattern constraint (fixture)."""
+
+
+def main():
+    path = sys.argv[1] if len(sys.argv) > 1 else "service.yaml"
+    scenarios = [
+        "valid config",
+        "missing required field",
+        "invalid enum value",
+        "bad pattern",
+        "missing file",
+        "unknown field",
+    ]
+    for name in scenarios:
+        print(f"OK -- {name}")
+    print(f"\n6/6 scenarios passed for {path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+EOF
+
+cat > tests/test_diagnostics.py <<'EOF'
+def test_placeholder():
+    assert True
+EOF
+
+git add -A
+git commit -q -m "platformops v0.5 (fixture) -- diagnostics land"
+
+STATE7B=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE7B" diagnostics.module_exists)" "True" "diagnostics.module_exists == True once diagnostics.py exists"
+check "$(json_get "$STATE7B" diagnostics.test_file_count)" "1" "diagnostics.test_file_count == 1"
+check "$(json_get "$STATE7B" diagnostics.config_error_subclasses.0)" "MissingFieldError" "diagnostics.config_error_subclasses[0] == MissingFieldError"
+check "$(json_get "$STATE7B" diagnostics.config_error_subclasses.1)" "InvalidPatternError" "diagnostics.config_error_subclasses[1] == InvalidPatternError"
+check "$(json_get "$STATE7B" diagnostics.demo.ok)" "True" "diagnostics.demo.ok == True (command ran fine)"
+check "$(json_get "$STATE7B" diagnostics.demo.exit_code)" "0" "diagnostics.demo.exit_code == 0 (the exit-code chip's source value)"
+check "$(json_get "$STATE7B" diagnostics.demo.missing_dependency_hint)" "" "diagnostics.demo.missing_dependency_hint is null when the fixture has no yaml import"
+
+DIAG_CMD="$(json_get "$STATE7B" diagnostics.demo.command)"
+if printf '%s' "$DIAG_CMD" | grep -q "fallback"; then
+  echo "  OK    diagnostics.demo.command used the documented uv-absent fallback"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  diagnostics.demo.command did not use the fallback (got [$DIAG_CMD])"
+  FAIL=$((FAIL + 1))
+fi
+
+DIAG_STDOUT="$(json_get "$STATE7B" diagnostics.demo.stdout)"
+if printf '%s' "$DIAG_STDOUT" | grep -q "6/6 scenarios passed"; then
+  echo "  OK    diagnostics.demo.stdout contains the raw six-scenario summary line"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  diagnostics.demo.stdout missing expected six-scenario summary line"
+  FAIL=$((FAIL + 1))
+fi
+
+echo
+echo "-- stage 7c: diagnostics.py fails one scenario -- non-zero exit-code chip --"
+cat > src/platformops/diagnostics.py <<'EOF'
+"""Fixture that fails on purpose, to exercise the non-zero exit-code chip."""
+
+import sys
+
+
+class ConfigError(Exception):
+    pass
+
+
+class MissingFieldError(ConfigError):
+    pass
+
+
+def main():
+    print("OK -- valid config")
+    print("FAIL -- missing required field: deployment_name")
+    print("\n5/6 scenarios passed")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+EOF
+
+STATE7C=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE7C" diagnostics.demo.ok)" "False" "diagnostics.demo.ok == False when a scenario fails"
+check "$(json_get "$STATE7C" diagnostics.demo.exit_code)" "1" "diagnostics.demo.exit_code == 1 (the exit-code chip goes red)"
+
+echo
 echo "== $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -1,0 +1,43 @@
+{
+  "checks": [
+    { "id": "m10-dd-threadpoolexecutor-import", "describe": "ThreadPoolExecutor imported for thread-based concurrency",
+      "run": "grep -c 'ThreadPoolExecutor' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-dd-asyncio-semaphore-used", "describe": "asyncio.Semaphore used for bounded async concurrency",
+      "run": "grep -c 'asyncio.Semaphore' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-dd-async-client-shared", "describe": "check_many_async opens one shared AsyncClient for the whole batch",
+      "run": "grep -c 'async with httpx.AsyncClient' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m10-dd-cancelled-result-not-dropped", "describe": "cancelled checks produce a HealthResult instead of being silently dropped",
+      "run": "grep -c 'cancelled: batch timeout exceeded' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-dd-gather-return-exceptions", "describe": "asyncio.gather with return_exceptions=True used for clean cancellation",
+      "run": "grep -c 'return_exceptions=True' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-dd-task-cancel-called", "describe": "task.cancel() called on pending tasks after batch timeout",
+      "run": "grep -c 'task.cancel' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-dd-executor-map-preserves-order", "describe": "check_many uses executor.map for input-order guarantee",
+      "run": "grep 'executor.map' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "contains": "executor.map" }, "weight": 2 },
+
+    { "id": "m10-dd-async-preserves-input-order", "describe": "check_many_async returns results in input URL order",
+      "run": "grep -A2 'return \\[' labs/checkpoints/v0.8/src/platformops/httpclient.py | grep 'for url in urls'",
+      "assert": { "contains": "url in urls" }, "weight": 2 },
+
+    { "id": "m10-dd-gil-demo-runs", "describe": "GIL release demo script runs without error",
+      "run": "cd labs/checkpoints/v0.8 && uv run python3 -c \"import threading, time; t=[]; [t.append(threading.Thread(target=time.sleep, args=(0.01,))) for _ in range(4)]; [x.start() for x in t]; [x.join() for x in t]; print('threads OK')\"",
+      "assert": { "contains": "threads OK" }, "weight": 1 },
+
+    { "id": "m10-dd-asyncio-event-loop-runs", "describe": "asyncio event loop runs correctly in the checkpoint",
+      "run": "cd labs/checkpoints/v0.8 && uv run python3 -c \"import asyncio; async def f(): return 42; print(asyncio.run(f()))\"",
+      "assert": { "contains": "42" }, "weight": 1 }
+  ]
+}

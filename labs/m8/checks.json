@@ -1,0 +1,111 @@
+{
+  "checks": [
+    { "id": "m8-checkpoint-cli-file-present", "describe": "the cli module exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.6/src/platformops/cli.py",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m8-checkpoint-diagnostics-config-servicedef-still-present", "describe": "config.py, diagnostics.py and servicedef.py from M5-M7 are still present -- this module is additive",
+      "run": "ls labs/checkpoints/v0.6/src/platformops/config.py labs/checkpoints/v0.6/src/platformops/diagnostics.py labs/checkpoints/v0.6/src/platformops/servicedef.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m8-checkpoint-inventory-package-still-present", "describe": "the inventory package from M3/M4 is still present",
+      "run": "ls labs/checkpoints/v0.6/src/platformops/inventory/report.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m8-checkpoint-typer-declared-dependency", "describe": "pyproject.toml declares typer as a dependency",
+      "run": "grep -c 'typer' labs/checkpoints/v0.6/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-no-extra-dependency-beyond-typer", "describe": "exactly three runtime dependencies are declared -- pydantic and pyyaml carried forward, typer the only addition this module",
+      "run": "grep -c '^    \"' labs/checkpoints/v0.6/pyproject.toml | head -1; python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v0.6/pyproject.toml','rb')); print(len(d['project']['dependencies']))\"",
+      "assert": { "contains": "3" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-entry-point-wired-to-cli-app", "describe": "the [project.scripts] entry point points at platformops.cli:app, not the old platformops:main",
+      "run": "grep -c 'platformops.cli:app' labs/checkpoints/v0.6/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.6.0 release version",
+      "run": "grep -c 'version = \"0.6.0\"' labs/checkpoints/v0.6/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m8-checkpoint-readme-names-v0-6", "describe": "README.md names the v0.6 release",
+      "run": "grep -c 'v0.6' labs/checkpoints/v0.6/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m8-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
+      "run": "cd labs/checkpoints/v0.6 && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/checkpoints/v0.6 && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m8-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- 53 tests: 42 carried from v0.5, plus 11 CLI tests added this module",
+      "run": "cd labs/checkpoints/v0.6 && uv run pytest -q 2>&1",
+      "assert": { "contains": "53 passed" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-help-lists-all-three-commands", "describe": "platformops --help lists validate, inspect and version",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --help 2>&1",
+      "assert": { "contains": "validate" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-help-lists-inspect-and-version", "describe": "platformops --help also lists inspect and version",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --help 2>&1 | grep -c -e inspect -e version",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m8-checkpoint-validate-good-file-exits-0", "describe": "validate on a good file reports OK and exits 0",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops validate service.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-validate-bad-file-names-field-exits-1", "describe": "validate on a bad file names the missing field and exits 1",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops validate service-bad.yaml; echo \"EXIT:$?\"",
+      "assert": { "contains": "deployment_name" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-validate-missing-file-exits-1", "describe": "validate on a missing file reports not-found and exits 1",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops validate service-does-not-exist.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-validate-json-good-file-is-parseable", "describe": "validate --json on a good file prints an object with status ok that a machine can parse",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops validate service.yaml --json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print(d['status'])\"",
+      "assert": { "contains": "ok" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-validate-json-bad-file-is-parseable-and-exits-1", "describe": "validate --json on a bad file prints a parseable error object and still exits 1",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops validate service-bad.yaml --json 2>/dev/null > /tmp/m8-check-validate.json; EXIT=$?; python3 -c \"import json; d=json.load(open('/tmp/m8-check-validate.json')); print(d['status'])\"; echo \"EXIT:$EXIT\"",
+      "assert": { "contains": "error" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-inspect-exits-0-and-prints-report", "describe": "inspect prints the plain-text inventory report and exits 0",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops inspect > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-inspect-json-is-parseable", "describe": "inspect --json prints a parseable object with the correct total_servers count",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops inspect --json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print(d['total_servers'])\"",
+      "assert": { "matches": "^10$" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-version-command-shows-0-6-0", "describe": "platformops version reports the current installed version, not a stale hardcoded one",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops version",
+      "assert": { "contains": "0.6.0" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-quiet-suppresses-ok-line", "describe": "--quiet produces no stdout on a successful validate",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --quiet validate service.yaml 2>/dev/null | wc -c | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-quiet-never-hides-a-failure", "describe": "--quiet still reports a real validation failure on stdout",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --quiet validate service-bad.yaml 2>/dev/null",
+      "assert": { "contains": "deployment_name" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-verbose-shows-debug-on-stderr", "describe": "--verbose surfaces DEBUG-level log lines on stderr that a plain run does not show",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --verbose validate service.yaml 2>&1 1>/dev/null",
+      "assert": { "contains": "DEBUG" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-verbose-and-quiet-together-is-usage-error", "describe": "combining --verbose and --quiet is rejected with exit code 2, distinct from a validation failure's exit code 1",
+      "run": "cd labs/checkpoints/v0.6 && uv run platformops --verbose --quiet version > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m8-checkpoint-entry-point-shim-imports-cli-app", "describe": "the installed console-script shim in .venv/bin/platformops resolves to platformops.cli:app -- proof the [project.scripts] wiring took effect",
+      "run": "cd labs/checkpoints/v0.6 && uv sync > /dev/null 2>&1 && grep -c 'from platformops.cli import app' .venv/bin/platformops",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m8-checkpoint-consistent-error-helper-used", "describe": "cli.py routes command-level errors through one shared helper instead of each command formatting its own",
+      "run": "grep -c 'def _fail' labs/checkpoints/v0.6/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

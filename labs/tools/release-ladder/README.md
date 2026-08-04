@@ -42,7 +42,14 @@ per module — the live counterpart to the course simulators.
   any of the `PLATFORMOPS_*` environment-override variables Module 6
   teaches are currently set in the environment this server itself is
   running in.
-- **More lenses land in M7+:** the grey tab shows where future lenses will
+- **Diagnostics lens (M7):** whether you have written
+  `src/platformops/diagnostics.py` yet, how many test files you have for
+  it, and which `ConfigError` subclasses — Module 7's typed
+  validation-failure hierarchy — it declares. If the file exists, this tab
+  also runs your real six-scenario
+  `python -m platformops.diagnostics service.yaml` check and shows its
+  output word-for-word, plus a chip for the process's real exit code.
+- **More lenses land in M8+:** the grey tab shows where future lenses will
   appear as you move through the course. Each later module adds one more tab
   to this same page — this tool never gets rebuilt from scratch.
 
@@ -105,31 +112,37 @@ small JSON snapshot of what it reads directly off your machine:
    It also reports, by name only, whether any of the `PLATFORMOPS_*`
    env-override variables Module 6 teaches are currently set in this
    server's own environment.
+7. **Your reliability diagnostics (M7 only)** — once
+   `src/platformops/diagnostics.py` exists, it reads the file's own text
+   (a defensive regex parse, never an import) to list the `ConfigError`
+   subclasses it declares, then actually runs your real six-scenario
+   `python -m platformops.diagnostics service.yaml` check and shows the
+   output, plus a chip for the process's real exit code.
 
 Three lenses (Release Ladder, Project Foundation, Module Map) are pure
 read-only: **never runs** `ruff`, `pytest` or `uv` — only files, tags and
 Git status, so refreshing those tabs is always fast and never changes
 anything in your project. The Inventory Reporter (M3), Service
-Definitions (M5) and Configuration (M6) lenses are the three deliberate
-exceptions: each runs your own module so it can show you the real output
-honestly. This is the whole point of a *live* tool: it shows you the truth
-about your own environment, not a simulation of it. (Unlike the other two,
-running your own `config.py` this way can write a small
-`service.resolved.yaml` file next to your `service.yaml` — the exact same
-file your own command would write if you ran it yourself; this tab does
-nothing beyond running your own command.)
+Definitions (M5), Configuration (M6) and Diagnostics (M7) lenses are the
+four deliberate exceptions: each runs your own module so it can show you
+the real output honestly. This is the whole point of a *live* tool: it
+shows you the truth about your own environment, not a simulation of it.
+(Unlike the other two, running your own `config.py` or `diagnostics.py`
+this way can write a small `service.resolved.yaml` file next to your
+`service.yaml` — the exact same file your own command would write if you
+ran it yourself; these tabs do nothing beyond running your own command.)
 
 If `uv` is not on your PATH yet, or you have not run `uv sync` so there is
-no `.venv`, the Inventory Reporter, Service Definitions and Configuration
-lenses quietly fall back to plain `python3 -m platformops.<module>` with
-`PYTHONPATH` pointed at your project's `src/` folder — so all three still
-work even at that early stage. You do not need to do anything for this;
-the server figures it out each time it runs. The Configuration lens's
-fallback goes one step further: it also runs with Python's `-S` flag,
-which skips site-packages, so if you have not yet run `uv add pyyaml`
-this tab shows a plain "run it yourself" hint instead of a wall of
-traceback — the same as it would on any machine, not just one that
-happens to lack pyyaml globally.
+no `.venv`, the Inventory Reporter, Service Definitions, Configuration and
+Diagnostics lenses quietly fall back to plain `python3 -m
+platformops.<module>` with `PYTHONPATH` pointed at your project's `src/`
+folder — so all four still work even at that early stage. You do not need
+to do anything for this; the server figures it out each time it runs. The
+Configuration and Diagnostics lenses' fallback goes one step further:
+both also run with Python's `-S` flag, which skips site-packages, so if
+you have not yet run `uv add pyyaml` those tabs show a plain "run it
+yourself" hint instead of a wall of traceback — the same as it would on
+any machine, not just one that happens to lack pyyaml globally.
 
 ## Lenses so far
 
@@ -141,6 +154,7 @@ happens to lack pyyaml globally.
 | Module Map | M4 | Your real `src/platformops/inventory/` package layout — which of the six expected files exist, their line counts, and their top-level function counts |
 | Service Definitions | M5 | Whether `servicedef.py` exists, its test files, your `ServiceDefinition` field count, whether the `Literal[`/`pattern=` constraint markers are present, and your real demo output run live |
 | Configuration | M6 | Whether `config.py` exists, its test files, whether `service.yaml`/`service-bad.yaml` are present, your real demo output run live, and whether any `PLATFORMOPS_*` env-override variables are set in the server's own environment (names only) |
+| Diagnostics | M7 | Whether `diagnostics.py` exists, its test files, the `ConfigError` subclasses it declares, and your real six-scenario `python -m platformops.diagnostics service.yaml` check run live, with a parsed exit-code chip |
 
 Every module from here can add one more tab to `index.html` — never a new
 tool, never a new file. If a future lens needs something your environment
@@ -192,6 +206,20 @@ tab and keep the rest of the page working, instead of showing a blank panel.
   `config.py` raised a different error when run directly. Run
   `uv run python -m platformops.config service.yaml` yourself in
   `~/platformops` to see the full error and fix it there.
+- **Diagnostics tab says "finish Module 7 to light this up"** — you have
+  not written `src/platformops/diagnostics.py` yet. That is expected
+  before Module 7; nothing is broken.
+- **Diagnostics tab shows a "run it yourself" hint instead of an error**
+  — the fallback path (no `uv`/`.venv` yet) deliberately has no
+  third-party packages, including `pyyaml`. Run
+  `uv add pyyaml && uv sync` in `~/platformops`, or just run
+  `uv run python -m platformops.diagnostics service.yaml` yourself; the
+  tab will pick it up the next time it polls.
+- **Diagnostics tab shows "failed" with a stderr snippet, or an exit-code
+  chip other than 0** — your `diagnostics.py` raised a different error, or
+  one of its six scenarios did not pass, when run directly. Run
+  `uv run python -m platformops.diagnostics service.yaml` yourself in
+  `~/platformops` to see the full output and fix it there.
 
 ## Testing this tool itself
 
@@ -213,8 +241,12 @@ empty state to a populated, real demo run — then swaps in a
 pyyaml-importing fixture and checks that the lens shows the plain-English
 "run it yourself" hint instead of a traceback wall — then starts a second,
 short-lived server with a `PLATFORMOPS_REGION` variable set to check that
-the env-override facts honestly report "set" too. It cleans up after
-itself.
+the env-override facts honestly report "set" too — then adds a tiny,
+pydantic-free `src/platformops/diagnostics.py` fixture (declaring a
+`ConfigError` subclass) and checks that the Diagnostics lens goes from the
+"finish Module 7" empty state to a populated `ConfigError`-subclass list,
+a real demo run, and an exit-code chip that matches the fixture's real
+exit code. It cleans up after itself.
 
 ```bash
 bash labs/tools/release-ladder/test.sh

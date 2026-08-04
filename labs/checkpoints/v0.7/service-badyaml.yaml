@@ -1,0 +1,11 @@
+name: checkout-api
+repository: github.com/example/checkout-api
+environment: prod
+  team_owner: payments-team
+kubernetes_namespace: checkout
+deployment_name: checkout-api
+aws_account: "111122223333"
+region: us-east-1
+observability:
+  dashboard_url: https://grafana.example.com/d/checkout-api
+  alert_channel: "#checkout-alerts"

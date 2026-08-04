@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m8-dd-entry-point-metadata-resolves-to-cli-app", "describe": "importlib.metadata's own entry_points() lookup -- not just pyproject.toml text -- resolves the platformops console script to platformops.cli:app, proving the installed shim's mapping is real, not just declared",
+      "run": "cd labs/checkpoints/v0.6 && uv run python3 -c \"from importlib.metadata import entry_points; eps = entry_points(group='console_scripts'); m = [e for e in eps if e.name == 'platformops']; print(m[0].value if m else 'MISSING')\"",
+      "assert": { "contains": "platformops.cli:app" }, "weight": 3 },
+
+    { "id": "m8-dd-pipeline-without-pipefail-hides-a-real-failure", "describe": "piping a failing validate into another command reports pipeline exit 0 without set -o pipefail -- the gotcha section 3 demonstrates",
+      "run": "cd labs/checkpoints/v0.6 && bash -c 'uv run platformops validate service-bad.yaml 2>/dev/null | wc -l > /dev/null; echo \"EXIT:$?\"'",
+      "assert": { "contains": "EXIT:0" }, "weight": 2 },
+
+    { "id": "m8-dd-pipefail-reveals-the-real-failure", "describe": "the same pipeline with set -o pipefail correctly surfaces validate's real exit code 1",
+      "run": "cd labs/checkpoints/v0.6 && bash -c 'set -o pipefail; uv run platformops validate service-bad.yaml 2>/dev/null | wc -l > /dev/null; echo \"EXIT:$?\"'",
+      "assert": { "contains": "EXIT:1" }, "weight": 2 }
+  ]
+}

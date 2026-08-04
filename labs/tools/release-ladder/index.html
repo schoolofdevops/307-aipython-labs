@@ -167,6 +167,33 @@
     padding:2px 8px;color:var(--dim)}
   .envchip.set{border-color:var(--warn);color:var(--warn)}
   .envchip.notset{border-color:var(--line);color:var(--faint);opacity:.6}
+
+  /* ---------- diagnostics lens (M7) ---------- */
+  #diagnostics dl{display:grid;grid-template-columns:16rem 1fr;gap:5px 10px;font-size:.86rem}
+  #diagnostics dt{color:var(--faint)}
+  #diagnostics dd{font-family:var(--mono)}
+  #diagSubclassWrap{margin-top:8px}
+  #diagSubclassWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #diagSubclasses{display:flex;flex-wrap:wrap;gap:6px}
+  .subclasschip{font-family:var(--mono);font-size:.72rem;border:1px solid var(--accent2);border-radius:6px;
+    padding:2px 8px;color:var(--accent2)}
+  #diagEmpty{font-size:.9rem;color:var(--dim);line-height:1.5;padding:6px 2px}
+  #diagEmpty code{color:var(--txt)}
+  #diagExitChip{margin:8px 0}
+  .exitchip{font-family:var(--mono);font-size:.78rem;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel2);padding:5px 10px;display:inline-block}
+  .exitchip.ok{border-color:var(--ok);color:var(--ok)}
+  .exitchip.fail{border-color:var(--bad);color:var(--bad)}
+  #diagErr{white-space:pre-wrap;color:var(--bad);font-family:var(--mono);font-size:.78rem;
+    margin-top:6px;line-height:1.4}
+  #diagErr.hint{color:var(--warn)}
+  #diagRawWrap{margin-top:8px}
+  #diagRawWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #diagRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
+    max-height:22rem;overflow:auto}
 </style>
 </head>
 <body>
@@ -183,7 +210,8 @@
     <button class="tab" data-view="modulemap">Module Map (M4)</button>
     <button class="tab" data-view="servicedef">Service Definitions (M5)</button>
     <button class="tab" data-view="config">Configuration (M6)</button>
-    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M7+</button>
+    <button class="tab" data-view="diagnostics">Diagnostics (M7)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M8+</button>
   </div>
 
   <div id="viewLadder" class="view active">
@@ -392,6 +420,58 @@
       </div>
     </div>
   </div>
+
+  <div id="viewDiagnostics" class="view">
+    <div class="panel" id="diagnostics">
+      <h2>Your reliability diagnostics, right now</h2>
+      <dl>
+        <dt>diagnostics.py file</dt><dd id="diagModuleExists">–</dd>
+        <dt>Test files for it</dt><dd id="diagTestCount">–</dd>
+      </dl>
+
+      <div id="diagSubclassWrap">
+        <h2>ConfigError subclasses defined</h2>
+        <div id="diagSubclasses"></div>
+      </div>
+
+      <div id="diagEmpty" style="display:none">
+        You have not written <code>src/platformops/diagnostics.py</code> yet —
+        finish Module 7 to light this up. Once the file exists, this tab will
+        actually run your six-scenario diagnostics check against your own
+        <code>service.yaml</code> and show its real output.
+      </div>
+
+      <div id="diagRun" style="display:none">
+        <dl style="margin-top:8px">
+          <dt>Command run</dt><dd id="diagCommand">–</dd>
+          <dt>Result</dt><dd id="diagStatus">–</dd>
+        </dl>
+
+        <div id="diagExitChip"></div>
+        <div id="diagErr"></div>
+
+        <div id="diagRawWrap">
+          <h2>Raw diagnostics output</h2>
+          <pre id="diagRaw"></pre>
+        </div>
+      </div>
+
+      <div id="note">
+        <b>What this shows:</b> whether you have written
+        <code>src/platformops/diagnostics.py</code> yet, how many test files
+        you have for it, and which <code>ConfigError</code> subclasses —
+        Module 7's typed validation-failure hierarchy — it declares, found
+        with a defensive regex over the file's own text (never an import).
+        If the file exists, this tab also runs your own six-scenario
+        <code>python -m platformops.diagnostics service.yaml</code> check
+        (the same 15-second time limit and <code>uv</code>-then-<code>python3
+        -S</code> fallback as the Configuration lens) and shows its raw
+        output, plus a chip for the process's real exit code. Read-only
+        either way — it never writes to your project beyond what your own
+        command would.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -404,6 +484,7 @@
     modulemap: document.getElementById('viewModuleMap'),
     servicedef: document.getElementById('viewServicedef'),
     config: document.getElementById('viewConfig'),
+    diagnostics: document.getElementById('viewDiagnostics'),
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
@@ -741,6 +822,88 @@
     });
   }
 
+  function renderDiagnostics(data){
+    const diag = data.diagnostics;
+    if (!diag) return;
+
+    document.getElementById('diagModuleExists').innerHTML = yesno(diag.module_exists);
+    document.getElementById('diagTestCount').textContent = String(diag.test_file_count);
+
+    const subGrid = document.getElementById('diagSubclasses');
+    subGrid.innerHTML = '';
+    const subclasses = diag.config_error_subclasses || [];
+    if (subclasses.length){
+      subclasses.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'subclasschip';
+        chip.textContent = name;
+        subGrid.appendChild(chip);
+      });
+    } else {
+      const chip = document.createElement('span');
+      chip.className = 'filechip missing';
+      chip.textContent = '(none found)';
+      subGrid.appendChild(chip);
+    }
+
+    const emptyEl = document.getElementById('diagEmpty');
+    const runEl = document.getElementById('diagRun');
+
+    if (!diag.module_exists){
+      emptyEl.style.display = 'block';
+      runEl.style.display = 'none';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    runEl.style.display = 'block';
+
+    const demo = diag.demo || {};
+    document.getElementById('diagCommand').textContent = demo.command || '(not run)';
+
+    let statusHtml;
+    if (demo.timed_out){
+      statusHtml = '<span class="no">timed out</span>';
+    } else if (demo.error && demo.exit_code === null){
+      statusHtml = '<span class="no">could not run</span>';
+    } else if (demo.ok){
+      statusHtml = '<span class="yes">ran fine (exit 0)</span>';
+    } else {
+      statusHtml = '<span class="no">failed (exit ' + demo.exit_code + ')</span>';
+    }
+    document.getElementById('diagStatus').innerHTML = statusHtml;
+
+    const exitChipWrap = document.getElementById('diagExitChip');
+    exitChipWrap.innerHTML = '';
+    if (demo.exit_code !== null && demo.exit_code !== undefined){
+      const chip = document.createElement('span');
+      chip.className = 'exitchip ' + (demo.exit_code === 0 ? 'ok' : 'fail');
+      chip.textContent = 'exit code: ' + demo.exit_code;
+      exitChipWrap.appendChild(chip);
+    }
+
+    const errBox = document.getElementById('diagErr');
+    errBox.classList.remove('hint');
+    if (!demo.ok){
+      if (demo.missing_dependency_hint){
+        errBox.classList.add('hint');
+        errBox.textContent = demo.missing_dependency_hint;
+      } else {
+        const parts = [];
+        if (demo.timed_out) parts.push(demo.error);
+        else if (demo.error) parts.push(demo.error);
+        if (demo.stderr_snippet) parts.push('What Python said (stderr):\n' + demo.stderr_snippet);
+        parts.push('Hint: run it yourself — "uv run python -m platformops.diagnostics service.yaml" ' +
+          'inside ~/platformops — to see the full error and fix it there.');
+        errBox.textContent = parts.join('\n\n');
+      }
+    } else {
+      errBox.textContent = '';
+    }
+
+    document.getElementById('diagRaw').textContent =
+      (demo.stdout && demo.stdout.trim()) ? demo.stdout : '(no output captured)';
+  }
+
   async function loadState(){
     try{
       const res = await fetch('/api/state', {cache: 'no-store'});
@@ -758,6 +921,7 @@
       renderModuleMap(data);
       renderServicedef(data);
       renderConfig(data);
+      renderDiagnostics(data);
     }catch(e){
       setConn(false);
     }

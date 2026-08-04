@@ -1,0 +1,99 @@
+{
+  "checks": [
+    { "id": "m10-checkpoint-version-0-8", "describe": "pyproject.toml carries the v0.8.0 release version",
+      "run": "grep -c 'version = \"0.8.0\"' labs/checkpoints/v0.8/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m10-checkpoint-readme-names-v0-8", "describe": "README.md names the v0.8 release",
+      "run": "grep -c 'v0.8' labs/checkpoints/v0.8/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m10-checkpoint-prior-modules-present", "describe": "all prior module source files still present",
+      "run": "ls labs/checkpoints/v0.8/src/platformops/cli.py labs/checkpoints/v0.8/src/platformops/config.py labs/checkpoints/v0.8/src/platformops/diagnostics.py labs/checkpoints/v0.8/src/platformops/servicedef.py labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m10-checkpoint-four-runtime-dependencies", "describe": "still exactly four runtime dependencies -- no new ones for concurrency",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v0.8/pyproject.toml','rb')); print(len(d['project']['dependencies']))\"",
+      "assert": { "matches": "^4$" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-ruff-check", "describe": "ruff check passes",
+      "run": "cd labs/checkpoints/v0.8 && uv run ruff check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m10-checkpoint-ruff-format", "describe": "ruff format is clean",
+      "run": "cd labs/checkpoints/v0.8 && uv run ruff format --check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m10-checkpoint-pytest", "describe": "pytest passes (101+ tests expected)",
+      "run": "cd labs/checkpoints/v0.8 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "matches": "passed" }, "weight": 3 },
+
+    { "id": "m10-checkpoint-help-lists-health-check-many", "describe": "--help lists health-check-many command",
+      "run": "cd labs/checkpoints/v0.8 && uv run platformops --help",
+      "assert": { "contains": "health-check-many" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-check-many-sequential-exists", "describe": "check_many_sequential function exists in httpclient.py",
+      "run": "grep -c 'def check_many_sequential' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-check-many-exists", "describe": "check_many (threaded) function exists",
+      "run": "grep -c 'def check_many(' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-check-health-async-exists", "describe": "check_health_async function exists",
+      "run": "grep -c 'async def check_health_async' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-check-many-async-exists", "describe": "check_many_async function exists",
+      "run": "grep -c 'async def check_many_async' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-threadpoolexecutor-import", "describe": "ThreadPoolExecutor imported from concurrent.futures",
+      "run": "grep -c 'ThreadPoolExecutor' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-asyncio-semaphore", "describe": "asyncio.Semaphore used for bounded concurrency",
+      "run": "grep -c 'Semaphore' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-batch-timeout-param", "describe": "check_many_async accepts batch_timeout parameter",
+      "run": "grep -c 'batch_timeout' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-cancelled-error-string", "describe": "cancelled checks report 'cancelled: batch timeout exceeded'",
+      "run": "grep -c 'cancelled: batch timeout exceeded' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-default-max-concurrency", "describe": "DEFAULT_MAX_CONCURRENCY constant defined",
+      "run": "grep -c 'DEFAULT_MAX_CONCURRENCY' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m10-checkpoint-health-summary-dataclass", "describe": "HealthSummary dataclass exists for aggregated results",
+      "run": "grep -c 'class HealthSummary' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m10-checkpoint-cli-mode-async", "describe": "CLI supports --mode async",
+      "run": "cd labs/checkpoints/v0.8 && uv run platformops health-check-many --help",
+      "assert": { "contains": "async" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-cli-batch-timeout-option", "describe": "CLI has --batch-timeout option",
+      "run": "cd labs/checkpoints/v0.8 && uv run platformops health-check-many --help",
+      "assert": { "contains": "batch-timeout" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-executor-map-not-submit", "describe": "check_many uses executor.map for input-order guarantee, not submit+as_completed",
+      "run": "grep 'executor.map' labs/checkpoints/v0.8/src/platformops/httpclient.py",
+      "assert": { "contains": "executor.map" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-concurrency-tests-exist", "describe": "test files contain concurrency-related tests",
+      "run": "grep -c 'check_many' labs/checkpoints/v0.8/tests/test_httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-http-check-reachable-exit-0", "describe": "health-check-many against reachable endpoint exits 0",
+      "run": "cd labs/checkpoints/v0.8 && uv run platformops --quiet health-check-many https://example.com; echo \"exit: $?\"",
+      "assert": { "contains": "exit: 0" }, "weight": 2 },
+
+    { "id": "m10-checkpoint-missing-scheme-exit-2", "describe": "health-check-many with missing scheme exits 2",
+      "run": "cd labs/checkpoints/v0.8 && uv run platformops health-check-many https://example.com not-a-url 2>&1; echo \"exit: $?\"",
+      "assert": { "contains": "exit: 2" }, "weight": 2 }
+  ]
+}

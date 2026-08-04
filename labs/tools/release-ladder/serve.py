@@ -12,24 +12,30 @@ splits the single file into a package, a Service Definitions panel
 (M5) that reads the real shape of `src/platformops/servicedef.py` (its
 `ServiceDefinition` field count and whether constraint markers like
 `Literal[` and `pattern=` are present) and runs the learner's own
-`python -m platformops.servicedef` demo, and a Configuration panel (M6)
+`python -m platformops.servicedef` demo, a Configuration panel (M6)
 that reads whether `src/platformops/config.py`, `service.yaml` and
 `service-bad.yaml` exist, runs the learner's own
 `python -m platformops.config service.yaml` demo, and reports (by name
 only, never by value) whether any of the `PLATFORMOPS_*` env-override
-variables Module 6 teaches are set in this server's own environment.
+variables Module 6 teaches are set in this server's own environment, and a
+Diagnostics panel (M7) that reads whether `src/platformops/diagnostics.py`
+exists, its tests, and which `ConfigError` subclasses it declares, then
+runs the learner's own six-scenario
+`python -m platformops.diagnostics service.yaml` check and shows its real
+output plus a parsed exit-code chip.
 
 Zero third-party dependencies. Python 3 standard library only. Mostly
 read-only: it runs `git tag` / `git status` / `git rev-parse` (never a
-write command) and reads files on disk. The exceptions are the M3, M5 and
-M6 lenses, which run the learner's own `python -m platformops.inventory`,
-`python -m platformops.servicedef` and `python -m platformops.config`
-(their own modules) so they can show the real output — they never run
-ruff, pytest, or anything that installs to their project (the M6 module
-itself can write a small `service.resolved.yaml`, the same file the
-learner's own command would write; this tool does nothing beyond running
-it). The M4 lens only reads file text (line counts, `def ` counts) — it
-never imports or executes the learner's package.
+write command) and reads files on disk. The exceptions are the M3, M5, M6
+and M7 lenses, which run the learner's own `python -m platformops.inventory`,
+`python -m platformops.servicedef`, `python -m platformops.config` and
+`python -m platformops.diagnostics` (their own modules) so they can show
+the real output — they never run ruff, pytest, or anything that installs
+to their project (the M6 and M7 modules can write a small
+`service.resolved.yaml`, the same file the learner's own command would
+write; this tool does nothing beyond running it). The M4 lens only reads
+file text (line counts, `def ` counts) — it never imports or executes the
+learner's package.
 
 Usage:
     python3 serve.py                        # uses ~/platformops (or $PLATFORMOPS_DIR)
@@ -862,6 +868,150 @@ def read_config(directory: str) -> dict:
     return {**source, "env_overrides": env_overrides, "demo": demo}
 
 
+CONFIG_ERROR_SUBCLASS_RE = re.compile(r'class\s+(\w+)\(ConfigError\)')
+
+
+def find_diagnostics_tests(directory: str) -> int:
+    """Count test files for the diagnostics module (e.g. tests/test_diagnostics.py).
+
+    Matches `tests/test_diagnostics*.py` so small naming variants still count.
+    """
+    if not os.path.isdir(directory):
+        return 0
+    return len(glob.glob(os.path.join(directory, "tests", "test_diagnostics*.py")))
+
+
+def parse_config_error_subclasses(text: str | None) -> list[str]:
+    """Defensive, regex-only scan for `class <Name>(ConfigError)` declarations in
+    `diagnostics.py`'s own text — the typed validation-failure hierarchy Module 7
+    introduces. Never imports the learner's code; if the file declares none (or
+    cannot be read), returns an empty list rather than raising.
+    """
+    if not text:
+        return []
+    try:
+        return CONFIG_ERROR_SUBCLASS_RE.findall(text)
+    except Exception:  # noqa: BLE001 - parsing is a bonus, never fatal
+        return []
+
+
+def read_diagnostics_source(directory: str) -> dict:
+    """Real, cheap-to-derive facts about the learner's
+    `src/platformops/diagnostics.py`: does it exist, how many test files does it
+    have, and which `ConfigError` subclasses it declares. Only reads file text —
+    never imports or executes it.
+    """
+    module_path = os.path.join(directory, "src", "platformops", "diagnostics.py")
+    module_exists = os.path.isfile(module_path)
+    test_file_count = find_diagnostics_tests(directory)
+
+    text = None
+    if module_exists:
+        try:
+            with open(module_path, "r", encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            text = None
+
+    return {
+        "module_exists": module_exists,
+        "test_file_count": test_file_count,
+        "config_error_subclasses": parse_config_error_subclasses(text),
+    }
+
+
+def run_diagnostics_demo(directory: str) -> dict:
+    """Run `python -m platformops.diagnostics service.yaml` inside `directory`
+    and capture its output — the M7 lens, Module 7's six-scenario reliability
+    check run against the learner's own `service.yaml`. Uses the same
+    uv-then-python3(-S) fallback pattern as the Configuration lens
+    (`run_config_demo`): tries `uv run python -m platformops.diagnostics
+    service.yaml` first, and falls back to plain `python3 -S -m
+    platformops.diagnostics service.yaml` with `PYTHONPATH` pointed at the
+    project's `src/` folder when `uv` is not on PATH or there is no `.venv`
+    yet. The `-S` flag skips site-packages, same as the Configuration lens, so
+    a learner who has not yet run `uv add pyyaml` / `uv sync` sees the same
+    `ModuleNotFoundError` this lens is built to detect and explain gracefully
+    — everywhere, not just on machines that happen to lack a global pyyaml
+    install.
+    """
+    uv_path = shutil.which("uv")
+    venv_exists = os.path.isdir(os.path.join(directory, ".venv"))
+
+    env = None
+    if uv_path and venv_exists:
+        cmd = [uv_path, "run", "python", "-m", "platformops.diagnostics", "service.yaml"]
+        command_label = "uv run python -m platformops.diagnostics service.yaml"
+    else:
+        cmd = [sys.executable, "-S", "-m", "platformops.diagnostics", "service.yaml"]
+        command_label = (
+            "python3 -m platformops.diagnostics service.yaml  (fallback: uv or "
+            ".venv not found, using PYTHONPATH=src)"
+        )
+        env = dict(os.environ)
+        src_dir = os.path.join(directory, "src")
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = src_dir + (os.pathsep + existing if existing else "")
+
+    result = {
+        "attempted": True,
+        "command": command_label,
+        "ok": False,
+        "exit_code": None,
+        "timed_out": False,
+        "stdout": "",
+        "stderr_snippet": None,
+        "error": None,
+        "missing_dependency_hint": None,
+    }
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=INVENTORY_TIMEOUT_SECS,
+            env=env,
+        )
+        result["exit_code"] = proc.returncode
+        result["ok"] = proc.returncode == 0
+        result["stdout"] = proc.stdout or ""
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            result["stderr_snippet"] = stderr[:STDERR_SNIPPET_MAX_CHARS]
+            if "ModuleNotFoundError" in stderr:
+                result["missing_dependency_hint"] = (
+                    "This fallback path deliberately has no third-party packages "
+                    "installed yet (no pyyaml). Run it yourself: "
+                    "uv run python -m platformops.diagnostics service.yaml"
+                )
+    except subprocess.TimeoutExpired:
+        result["timed_out"] = True
+        result["error"] = (
+            f"The command took longer than {INVENTORY_TIMEOUT_SECS}s and was stopped."
+        )
+    except OSError as exc:
+        result["error"] = f"Could not run the command ({exc})."
+
+    return result
+
+
+def read_diagnostics(directory: str) -> dict:
+    """The M7 lens: real facts about the learner's
+    `src/platformops/diagnostics.py` (source facts, always) plus — once the
+    file exists — a live run of its six-scenario `python -m
+    platformops.diagnostics service.yaml` check against the learner's own
+    `service.yaml` (see `run_diagnostics_demo`).
+    """
+    source = read_diagnostics_source(directory)
+    if not source["module_exists"]:
+        return {**source, "demo": None}
+
+    demo = run_diagnostics_demo(directory)
+    return {**source, "demo": demo}
+
+
 def build_ladder_state(tags_present: list[str]) -> dict:
     tag_set = set(tags_present)
     flat = flat_releases()
@@ -921,6 +1071,7 @@ def build_state() -> dict:
     module_map = read_module_map(directory)
     servicedef = read_servicedef(directory)
     config = read_config(directory)
+    diagnostics = read_diagnostics(directory)
     return {
         "platformops_dir": directory,
         "foundation": foundation,
@@ -929,6 +1080,7 @@ def build_state() -> dict:
         "module_map": module_map,
         "servicedef": servicedef,
         "config": config,
+        "diagnostics": diagnostics,
     }
 
 

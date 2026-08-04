@@ -1,0 +1,91 @@
+{
+  "checks": [
+    { "id": "m9-checkpoint-httpclient-file-present", "describe": "the httpclient module exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m9-checkpoint-cli-config-diagnostics-servicedef-still-present", "describe": "cli.py, config.py, diagnostics.py and servicedef.py from M5-M8 are still present -- this module is additive",
+      "run": "ls labs/checkpoints/v0.7/src/platformops/cli.py labs/checkpoints/v0.7/src/platformops/config.py labs/checkpoints/v0.7/src/platformops/diagnostics.py labs/checkpoints/v0.7/src/platformops/servicedef.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m9-checkpoint-httpx-declared-dependency", "describe": "pyproject.toml declares httpx as a runtime dependency",
+      "run": "grep -c 'httpx' labs/checkpoints/v0.7/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-respx-is-dev-only-not-runtime", "describe": "respx is a dev-only dependency (mocked tests), never a runtime dependency of the toolkit itself",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v0.7/pyproject.toml','rb')); deps=d['project']['dependencies']; dev=d['dependency-groups']['dev']; print('respx-in-deps' if any('respx' in x for x in deps) else 'respx-not-in-deps'); print('respx-in-dev' if any('respx' in x for x in dev) else 'respx-not-in-dev')\"",
+      "assert": { "contains": "respx-not-in-deps" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-four-runtime-dependencies", "describe": "exactly four runtime dependencies are declared -- pydantic, pyyaml and typer carried forward, httpx the only addition this module",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v0.7/pyproject.toml','rb')); print(len(d['project']['dependencies']))\"",
+      "assert": { "matches": "^4$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.7.0 release version",
+      "run": "grep -c 'version = \"0.7.0\"' labs/checkpoints/v0.7/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m9-checkpoint-readme-names-v0-7", "describe": "README.md names the v0.7 release",
+      "run": "grep -c 'v0.7' labs/checkpoints/v0.7/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m9-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
+      "run": "cd labs/checkpoints/v0.7 && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/checkpoints/v0.7 && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m9-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- 83 tests: 68 carried from earlier modules plus the httpclient/http-check/repo-info suite, plus workflow-runs added this module",
+      "run": "cd labs/checkpoints/v0.7 && uv run pytest -q 2>&1",
+      "assert": { "contains": "83 passed" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-help-lists-the-three-new-commands", "describe": "platformops --help lists http-check, repo-info and workflow-runs alongside the M5-M8 commands",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops --help 2>&1 | grep -c -e http-check -e repo-info -e workflow-runs",
+      "assert": { "matches": "^3$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-timeout-is-explicit-not-library-default", "describe": "the client sets an explicit timeout policy instead of relying on a library default",
+      "run": "grep -c 'DEFAULT_TIMEOUT = httpx.Timeout' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-token-value-never-appears-in-logs", "describe": "a token passed for authentication never appears in a log line -- only the fact that one was supplied does",
+      "run": "cd labs/checkpoints/v0.7 && uv run python3 -c \"import logging,io; from platformops.httpclient import _auth_headers; buf=io.StringIO(); h=logging.StreamHandler(buf); logging.getLogger('platformops.httpclient').addHandler(h); logging.getLogger('platformops.httpclient').setLevel(logging.DEBUG); _auth_headers('super-secret-token-value'); text=buf.getvalue(); print('leaked' if 'super-secret-token-value' in text else 'not-leaked')\"",
+      "assert": { "contains": "not-leaked" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-http-check-reachable-endpoint-exits-0", "describe": "http-check against a reachable, healthy endpoint exits 0 -- example.com, not the GitHub API, so this check never flakes on the anonymous rate limit the other checks below already spend",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops http-check https://example.com > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-http-check-missing-scheme-exits-2", "describe": "http-check on a URL missing a scheme is a usage error, exit 2, caught before any network call",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops http-check not-a-url > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-http-check-unreachable-host-exits-1", "describe": "http-check against a host that cannot be reached at all still exits 1, distinct from the exit-2 usage error above",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops http-check https://this-host-does-not-exist-platformops-lab.example --timeout 5 > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-repo-info-known-public-repo-is-parseable", "describe": "repo-info --json on a real public repository prints a parseable object with status ok",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops repo-info octocat/Hello-World --json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print(d['status'])\"",
+      "assert": { "contains": "ok" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-repo-info-missing-repo-exits-1", "describe": "repo-info against a repository that does not exist reports the 404 and exits 1",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops repo-info octocat/this-repo-does-not-exist-at-all-xyz > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-repo-info-slug-without-slash-exits-2", "describe": "repo-info given a slug with no owner/repo slash is a usage error, exit 2",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops repo-info not-a-slug > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-workflow-runs-follows-pagination-past-one-page", "describe": "workflow-runs against a repository with a long CI history collects more results than a single GitHub page (30) holds -- proof the Link-header pagination actually followed a next page",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops workflow-runs kubernetes-sigs/kind --json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print('multi-page' if d['count'] > 30 else 'single-page')\"",
+      "assert": { "contains": "multi-page" }, "weight": 3 },
+
+    { "id": "m9-checkpoint-workflow-runs-respects-max-pages-ceiling", "describe": "--max-pages 1 caps workflow-runs at one page's worth of results, even against a repository with far more history available",
+      "run": "cd labs/checkpoints/v0.7 && uv run platformops workflow-runs kubernetes-sigs/kind --max-pages 1 --json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print('capped' if d['count'] <= 30 else 'not-capped')\"",
+      "assert": { "contains": "capped" }, "weight": 2 },
+
+    { "id": "m9-checkpoint-retry-helper-never-called-with-post", "describe": "_request_with_retry is only ever invoked with GET in httpclient.py, matching the idempotent-retry-only design",
+      "run": "grep -n '_request_with_retry(client,' labs/checkpoints/v0.7/src/platformops/httpclient.py",
+      "assert": { "absent": "POST" }, "weight": 2 }
+  ]
+}

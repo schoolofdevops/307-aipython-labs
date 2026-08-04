@@ -1,0 +1,111 @@
+{
+  "checks": [
+    { "id": "m7-checkpoint-diagnostics-file-present", "describe": "the diagnostics module exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.5/src/platformops/diagnostics.py",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m7-checkpoint-config-file-present", "describe": "the config module from M6 is still present -- this module is additive",
+      "run": "ls labs/checkpoints/v0.5/src/platformops/config.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m7-checkpoint-servicedef-file-present", "describe": "the service definition model from M5 is still present",
+      "run": "ls labs/checkpoints/v0.5/src/platformops/servicedef.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m7-checkpoint-six-fixture-files-present", "describe": "all five committed scenario fixtures ship in the checkpoint (the sixth, permission-denied, is created live by chmod)",
+      "run": "ls labs/checkpoints/v0.5/service.yaml labs/checkpoints/v0.5/service-bad.yaml labs/checkpoints/v0.5/service-badyaml.yaml labs/checkpoints/v0.5/service-wrongtype.yaml labs/checkpoints/v0.5/service-badaccount.yaml",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m7-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.5.0 release version",
+      "run": "grep -c 'version = \"0.5.0\"' labs/checkpoints/v0.5/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m7-checkpoint-readme-names-v0-5", "describe": "README.md names the v0.5 release",
+      "run": "grep -c 'v0.5' labs/checkpoints/v0.5/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m7-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
+      "run": "cd labs/checkpoints/v0.5 && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/checkpoints/v0.5 && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m7-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- 42 tests: 25 carried from v0.4, plus diagnostics, permission-handling, aws_account-pattern and logging tests added this module",
+      "run": "cd labs/checkpoints/v0.5 && uv run pytest -q 2>&1",
+      "assert": { "contains": "42 passed" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario1-invalid-yaml-clean-exit-1", "describe": "scenario 1 (invalid YAML): diagnostics reports a clean error and exits 1, not a raw traceback",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-badyaml.yaml; echo \"EXIT:$?\"",
+      "assert": { "contains": "invalid YAML" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario1-exit-code-is-1", "describe": "scenario 1 exits 1, never 0 and never a traceback's default exit",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-badyaml.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-scenario2-missing-file-clean-exit-1", "describe": "scenario 2 (missing file): diagnostics names the file and exits 1",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-does-not-exist.yaml; echo \"EXIT:$?\"",
+      "assert": { "contains": "not found" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario3-missing-field-names-field", "describe": "scenario 3 (missing field): output names deployment_name specifically, not a generic message",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-bad.yaml",
+      "assert": { "contains": "deployment_name" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario3-exit-code-is-1", "describe": "scenario 3 exits 1 -- never the silent-success bug from the broken version",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-bad.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario4-wrong-type-names-field", "describe": "scenario 4 (wrong type): output names deployment_name and its type problem",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-wrongtype.yaml",
+      "assert": { "contains": "deployment_name" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario5-permission-denied-clean-not-traceback", "describe": "scenario 5 (permission denied): a live-created unreadable copy produces a friendly permission message, not a traceback, and exits 1",
+      "run": "cd labs/checkpoints/v0.5 && cp service.yaml /tmp/m7-noperm-check.yaml && chmod 000 /tmp/m7-noperm-check.yaml && uv run python -m platformops.diagnostics /tmp/m7-noperm-check.yaml 2>&1; EXIT=$?; chmod 644 /tmp/m7-noperm-check.yaml; rm -f /tmp/m7-noperm-check.yaml; echo \"EXIT:$EXIT\"",
+      "assert": { "contains": "permission" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario6-unexpected-value-names-field", "describe": "scenario 6 (unexpected value): a 5-digit aws_account is flagged by field name, not silently reported OK",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-badaccount.yaml",
+      "assert": { "contains": "aws_account" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-scenario6-exit-code-is-1", "describe": "scenario 6 exits 1 -- the broken version's worst bug (a bad account ID reported as OK) is gone",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service-badaccount.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-good-file-still-exits-0", "describe": "the control case: a valid service.yaml still reports OK and exits 0 after all six fixes",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-no-argument-exits-2", "describe": "running diagnostics with no path argument exits 2 -- the usage-error code, distinct from a config problem",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-verbose-flag-shows-debug-detail", "describe": "--verbose surfaces DEBUG-level log lines on stderr that a plain run does not show",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service.yaml --verbose 2>&1 1>/dev/null",
+      "assert": { "contains": "DEBUG" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-verbose-never-logs-a-field-value", "describe": "--verbose logs the file path, never a field value (secrets-never-logged discipline)",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -m platformops.diagnostics service.yaml --verbose 2>&1 1>/dev/null | grep -c 'checkout-api' || true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-configerror-family-has-three-subclasses", "describe": "ConfigError has grown a small family this module -- not-found, permission and parse errors are distinct types",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -c \"from platformops.config import ConfigError, ConfigNotFoundError, ConfigParseError, ConfigPermissionError; assert issubclass(ConfigNotFoundError, ConfigError); assert issubclass(ConfigParseError, ConfigError); assert issubclass(ConfigPermissionError, ConfigError); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m7-checkpoint-no-bare-except-in-diagnostics", "describe": "the fixed diagnostics.py contains no bare except: -- the antipattern from the broken version is gone",
+      "run": "grep -c '^\\s*except:\\s*$' labs/checkpoints/v0.5/src/platformops/diagnostics.py",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-diagnostics-reuses-config-loader", "describe": "diagnostics.py imports the shared, already-safe loader from config.py instead of reimplementing file loading",
+      "run": "grep -c 'from platformops.config import' labs/checkpoints/v0.5/src/platformops/diagnostics.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-aws-account-pattern-in-servicedef", "describe": "servicedef.py enforces the 12-digit aws_account pattern added this module",
+      "run": "grep -c 'AWS_ACCOUNT_PATTERN\\|aws_account = Field\\|aws_account: str = Field' labs/checkpoints/v0.5/src/platformops/servicedef.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m7-checkpoint-env-overrides-still-intact", "describe": "the v0.4 env-override behavior still works -- this module is additive, not a rewrite",
+      "run": "cd labs/checkpoints/v0.5 && uv run python -c \"from platformops.config import apply_env_overrides; r = apply_env_overrides({'environment': 'prod'}, environ={'PLATFORMOPS_ENVIRONMENT': 'staging'}); assert r['environment'] == 'staging'; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 2 }
+  ]
+}

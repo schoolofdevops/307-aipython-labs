@@ -1,0 +1,35 @@
+{
+  "checks": [
+    { "id": "m11-dd-no-shell-true-regression", "describe": "local_ops.py still never uses shell=True (regression check ahead of the injection demo)",
+      "run": "bash -c \"grep -c 'shell=True' labs/checkpoints/v0.9/src/platformops/local_ops.py || true\"",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m11-dd-timeout-still-present-everywhere", "describe": "every subprocess.run( call site in local_ops.py still has a timeout argument",
+      "run": "python3 -c \"import re; text = open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); calls = re.findall(r'subprocess\\.run\\([^)]*\\)', text, re.S); missing = [c for c in calls if 'timeout' not in c]; print(len(missing))\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m11-dd-check-security-command-registered", "describe": "check-security command is registered on the CLI",
+      "run": "cd labs/checkpoints/v0.9 && uv run platformops --help",
+      "assert": { "contains": "check-security" }, "weight": 2 },
+
+    { "id": "m11-dd-container-list-ndjson-note", "describe": "local_ops.py documents docker ps's newline-delimited JSON shape",
+      "run": "grep -ci 'newline-delimited\\|one .*object per line' labs/checkpoints/v0.9/src/platformops/local_ops.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m11-dd-injection-demo-list-form-fails-cleanly", "describe": "argument-list subprocess.run() rejects a semicolon-laden path as one literal argument instead of running it",
+      "run": "python3 -c \"import subprocess; r = subprocess.run(['git', 'log', '; echo injected #'], capture_output=True, text=True, timeout=5); print('rejected-cleanly' if r.returncode != 0 else 'unexpected-success')\"",
+      "assert": { "contains": "rejected-cleanly" }, "weight": 2 },
+
+    { "id": "m11-dd-os-system-waitstatus-decode-works", "describe": "os.WEXITSTATUS correctly decodes os.system's raw wait status on this machine",
+      "run": "python3 -c \"import os; status = os.system('exit 3'); print(os.WEXITSTATUS(status))\"",
+      "assert": { "contains": "3" }, "weight": 1 },
+
+    { "id": "m11-dd-popen-terminate-lets-child-catch-sigterm", "describe": "Popen.terminate() delivers a catchable SIGTERM the child can handle before exiting",
+      "run": "python3 -c \"import subprocess, time; script = 'import signal, sys, time\\nsignal.signal(signal.SIGTERM, lambda *a: (print(\\'caught\\', flush=True), sys.exit(0)))\\ntime.sleep(5)\\n'; p = subprocess.Popen(['python3', '-c', script], stdout=subprocess.PIPE, text=True); time.sleep(0.3); p.terminate(); out, _ = p.communicate(timeout=3); print(out.strip())\"",
+      "assert": { "contains": "caught" }, "weight": 2 },
+
+    { "id": "m11-dd-run-timeout-kills-not-terminates", "describe": "subprocess.run(timeout=N) raises TimeoutExpired and the child never runs its own SIGTERM handler",
+      "run": "python3 -c \"import subprocess; script = 'import signal, sys, time\\nsignal.signal(signal.SIGTERM, lambda *a: (print(\\'caught\\', flush=True), sys.exit(0)))\\ntime.sleep(5)\\n'\nimport subprocess as sp\ntry:\n    sp.run(['python3', '-c', script], timeout=1, capture_output=True, text=True)\n    print('no-timeout-raised')\nexcept sp.TimeoutExpired:\n    print('timeout-raised-child-not-cleaned-up')\"",
+      "assert": { "contains": "timeout-raised-child-not-cleaned-up" }, "weight": 2 }
+  ]
+}
