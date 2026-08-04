@@ -1,0 +1,111 @@
+{
+  "checks": [
+    { "id": "m18-dd-script-deterministic", "describe": "running the script twice on the same file produces identical output -- uses cmp, not diff (a shell hook can make plain diff misreport differing files as identical)",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml > /tmp/m18-check-run1.json; uv run python scripts/review-service.py service.yaml > /tmp/m18-check-run2.json; cmp /tmp/m18-check-run1.json /tmp/m18-check-run2.json && echo identical || echo differs; rm -f /tmp/m18-check-run1.json /tmp/m18-check-run2.json",
+      "assert": { "contains": "identical" }, "weight": 3 },
+
+    { "id": "m18-dd-exit-0-for-good", "describe": "the script exits 0 for a valid service file",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-dd-exit-1-for-bad", "describe": "the script exits 1 for a service file with missing fields",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service-bad.yaml >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-exit-2-for-missing", "describe": "the script exits 2 for a nonexistent file",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py does-not-exist.yaml >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m18-dd-json-output-parseable", "describe": "the script's stdout is valid JSON",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml 2>/dev/null | python3 -m json.tool >/dev/null && echo valid || echo invalid",
+      "assert": { "contains": "valid" }, "weight": 2 },
+
+    { "id": "m18-dd-report-has-all-fields", "describe": "the JSON report contains all six required top-level keys",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); keys=set(d.keys()); expected={'file','validation','problems','observability','namespace','recommendation'}; print('complete' if expected.issubset(keys) else 'missing: '+str(expected-keys))\"",
+      "assert": { "contains": "complete" }, "weight": 2 },
+
+    { "id": "m18-dd-observability-has-subfields", "describe": "the observability object has dashboard_url_set and alert_channel_set",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin)['observability']; print('complete' if 'dashboard_url_set' in d and 'alert_channel_set' in d else 'missing')\"",
+      "assert": { "contains": "complete" }, "weight": 1 },
+
+    { "id": "m18-dd-tests-all-pass", "describe": "the full test suite passes including review-service tests",
+      "run": "cd labs/platformops && uv run pytest tests/test_review_service.py -q 2>/dev/null | tail -1",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m18-dd-skill-references-script-not-validate", "describe": "SKILL.md references the script and not raw validate command",
+      "run": "grep -l 'review-service.py' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md && echo found || echo missing",
+      "assert": { "contains": "found" }, "weight": 2 },
+
+    { "id": "m18-dd-file-exists", "describe": "deep-dive.md exists for M18",
+      "run": "test -f site/docs/m18-python-inside-skills/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m18-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c 'Use it when:' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m18-dd-no-unfilled-placeholders", "describe": "all expected output blocks have been folded with real captured output",
+      "run": "grep -c '<expected output — folded in during live lab validation>' site/docs/m18-python-inside-skills/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m18-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-dd-does-not-use-bare-diff", "describe": "deep dive never asks the learner to run bare `diff` -- a shell hook can make it misreport differing files as identical, so every comparison uses cmp instead",
+      "run": "grep -cE '(^|[^m])diff /' site/docs/m18-python-inside-skills/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-dd-covers-word-count-measurement", "describe": "deep dive measures the Steps-section word-count trade between skill and script, the mechanism behind the lesson's claim that scripting moves reasoning rather than deleting it",
+      "run": "grep -c 'wc -w' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-dd-covers-testing-boundary", "describe": "deep dive counts real assert statements in the script's test file and checks for the absence of an equivalent skill test file, the mechanical version of the lesson's assert-output-equals-expected rule",
+      "run": "grep -c 'assert ' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-dd-word-counts-match-real-project", "describe": "the deep dive's documented SKILL.md word count matches the real project's current SKILL.md",
+      "run": "wc -w < labs/platformops/.claude/skills/service-readiness-review/SKILL.md | tr -d ' '",
+      "assert": { "matches": "^83[0-9]$" }, "weight": 1 },
+
+    { "id": "m18-dd-test-file-assert-count-matches", "describe": "the deep dive's documented assert count (21) matches the real tests/test_review_service.py",
+      "run": "grep -c '    assert ' labs/platformops/tests/test_review_service.py",
+      "assert": { "matches": "^21$" }, "weight": 2 },
+
+    { "id": "m18-dd-covers-fat-script-anti-pattern", "describe": "deep dive demonstrates the fat-script anti-pattern by running a reimplemented validator next to the real one on a file that should fail",
+      "run": "grep -ci 'fat.script\\|fat script' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-dd-covers-agent-wording-variance", "describe": "deep dive shows real live-agent output varying in wording across repeated runs of the same raw-interpretation prompt",
+      "run": "grep -c 'claude -p' site/docs/m18-python-inside-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-dd-real-project-version-is-1-3-0", "describe": "the real project's version is already 1.3.0 -- the lab's version bump happened before this deep dive runs",
+      "run": "grep -c 'version = \"1.3.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-dd-real-project-still-passes-tests", "describe": "the real project's test suite still passes -- nothing on this page touched it",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 }
+  ]
+}

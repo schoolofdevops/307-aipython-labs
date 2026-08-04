@@ -1,0 +1,211 @@
+{
+  "checks": [
+    { "id": "m18-script-exists", "describe": "scripts/review-service.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.3.0/scripts/review-service.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m18-script-executable", "describe": "the review script has a shebang line",
+      "run": "head -1 labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "contains": "#!/usr/bin/env python3" }, "weight": 1 },
+
+    { "id": "m18-script-imports-validate-service", "describe": "the script imports validate_service from the tested package -- it does not reimplement validation",
+      "run": "grep -c 'from platformops.servicedef import validate_service' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m18-script-imports-load-yaml-dict", "describe": "the script imports load_yaml_dict from the tested package",
+      "run": "grep -c 'from platformops.config import' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-script-no-standalone-required-fields-list", "describe": "the script does not define its own hardcoded required-fields list -- a sign of reimplemented validation",
+      "run": "grep -c 'REQUIRED_FIELDS' labs/checkpoints/v1.3.0/scripts/review-service.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m18-script-prints-json", "describe": "the script uses json.dumps to produce output",
+      "run": "grep -c 'json.dumps' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-script-has-exit-code-0", "describe": "the script returns exit code 0 for a passing file",
+      "run": "grep -c 'return report, 0' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-script-has-exit-code-1", "describe": "the script returns exit code 1 for a validation or observability failure",
+      "run": "grep -c 'return report, 1' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-script-has-exit-code-2", "describe": "the script returns exit code 2 for a file-level error",
+      "run": "grep -c 'return report, 2' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-script-checks-dashboard-url", "describe": "the script checks the dashboard_url observability field",
+      "run": "grep -c 'dashboard_url' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^[1-9][0-9]*$" }, "weight": 2 },
+
+    { "id": "m18-script-checks-alert-channel", "describe": "the script checks the alert_channel observability field",
+      "run": "grep -c 'alert_channel' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^[1-9][0-9]*$" }, "weight": 2 },
+
+    { "id": "m18-script-uses-sys-exit", "describe": "the script exits via sys.exit(main()) to translate a return value into a process exit code",
+      "run": "grep -c 'sys.exit(main())' labs/checkpoints/v1.3.0/scripts/review-service.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m18-script-exit-0-on-good-service-live", "describe": "live check: the script exits 0 on a valid, ready-to-ship service definition",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m18-script-exit-1-on-bad-service-live", "describe": "live check: the script exits 1 on a service definition that fails validation",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service-bad.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m18-script-exit-2-on-missing-file-live", "describe": "live check: the script exits 2 when the target file does not exist",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service-does-not-exist.yaml > /dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m18-script-emits-valid-json-live", "describe": "live check: the script's stdout parses as JSON",
+      "run": "cd labs/platformops && uv run python scripts/review-service.py service.yaml | python3 -c 'import json,sys; json.load(sys.stdin)' && echo valid-json",
+      "assert": { "contains": "valid-json" }, "weight": 2 },
+
+    { "id": "m18-skill-calls-script", "describe": "the updated SKILL.md tells the agent to run scripts/review-service.py",
+      "run": "grep -c 'scripts/review-service.py' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m18-skill-no-raw-validate-json-command", "describe": "the updated SKILL.md no longer tells the agent to run platformops validate --json",
+      "run": "grep -c 'platformops validate.*--json' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m18-skill-no-re-derive", "describe": "the skill tells the agent not to re-derive fields from the script's report",
+      "run": "grep -ci 're-derive\\|recompute\\|second-guess' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-skill-step-count-in-range", "describe": "the updated Steps section has between 4 and 8 numbered steps",
+      "run": "grep -cE '^[0-9]+\\. ' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[4-8]$" }, "weight": 2 },
+
+    { "id": "m18-skill-has-eight-sections", "describe": "the skill still has all eight required body sections after the update",
+      "run": "grep -c '^## ' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m18-skill-no-python-code", "describe": "the skill's steps still do not reimplement validation as inline Python",
+      "run": "grep -c '```python' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-skill-core-has-no-agent-name", "describe": "the required core (before Optional extensions) still never names one coding agent",
+      "run": "awk '/^## Optional extensions/{exit} {print}' labs/checkpoints/v1.3.0/.claude/skills/service-readiness-review/SKILL.md | grep -ci claude; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m18-tests-exist", "describe": "tests/test_review_service.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.3.0/tests/test_review_service.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m18-tests-cover-good-file", "describe": "tests include a passing (exit 0) case",
+      "run": "grep -c 'exit_code == 0' labs/checkpoints/v1.3.0/tests/test_review_service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-tests-cover-bad-file", "describe": "tests include a validation failure (exit 1) case",
+      "run": "grep -c 'exit_code == 1' labs/checkpoints/v1.3.0/tests/test_review_service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-tests-cover-missing-file", "describe": "tests include a missing file (exit 2) case",
+      "run": "grep -c 'exit_code == 2' labs/checkpoints/v1.3.0/tests/test_review_service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-tests-cover-empty-observability", "describe": "tests include an empty observability fields case",
+      "run": "grep -ci 'empty_observability\\|dashboard_url_set.*False' labs/checkpoints/v1.3.0/tests/test_review_service.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-test-service-cleaned-up", "describe": "Teardown: the throwaway test-service.yaml was removed from the live project",
+      "run": "test -f labs/platformops/test-service.yaml && echo still-present || echo cleaned",
+      "assert": { "contains": "cleaned" }, "weight": 2 },
+
+    { "id": "m18-version-bumped", "describe": "pyproject.toml is bumped to 1.3.0",
+      "run": "grep -c 'version = \"1.3.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m18-changelog-has-1-3-0-section", "describe": "CHANGELOG.md has a [1.3.0] release section",
+      "run": "grep -c '## \\[1.3.0\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m18-changelog-mentions-script", "describe": "the [1.3.0] entry documents the new script",
+      "run": "grep -c 'review-service.py' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-changelog-mentions-skill-change", "describe": "the [1.3.0] entry documents the SKILL.md change",
+      "run": "grep -c 'SKILL.md' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-changelog-unreleased-reset", "describe": "the [Unreleased] section is empty again -- its prior entry moved into [1.3.0]",
+      "run": "sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' labs/platformops/CHANGELOG.md | sed '1d;$d' | tr -d '[:space:]' | wc -c | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-no-source-code-touched", "describe": "src/platformops/ is untouched by this module -- the new logic lives in scripts/, not the tested package",
+      "run": "cd labs/platformops && git status --porcelain src/platformops/ | wc -l | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m18-cli-still-works", "describe": "regression: the CLI still runs after this module's work",
+      "run": "cd labs/platformops && uv run platformops --help > /dev/null 2>&1 && echo cli-ok || echo cli-fail",
+      "assert": { "contains": "cli-ok" }, "weight": 2 },
+
+    { "id": "m18-tests-still-pass", "describe": "regression: the full live test suite still passes at the new version",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m18-checkpoint-v1-2-1-regression-safe", "describe": "regression: the frozen v1.2.1 checkpoint this module started from still passes its own tests, untouched",
+      "run": "cd labs/checkpoints/v1.2.1 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m18-checkpoint-v1-3-0-no-venv", "describe": "the v1.3.0 checkpoint was snapshotted without .venv, per the versioned-checkpoint hard rule",
+      "run": "test -d labs/checkpoints/v1.3.0/.venv && echo present || echo absent",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m18-checkpoint-v1-3-0-version", "describe": "the v1.3.0 checkpoint's pyproject.toml records the bumped version",
+      "run": "grep -c 'version = \"1.3.0\"' labs/checkpoints/v1.3.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m18-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m18-python-inside-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-lesson-covers-thermometer-analogy", "describe": "the lesson uses the thermometer analogy",
+      "run": "grep -ci 'thermometer' site/docs/m18-python-inside-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-lesson-covers-exit-code-contract", "describe": "the lesson names the exit-code contract",
+      "run": "grep -ci 'exit code' site/docs/m18-python-inside-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -ci 'common pitfalls' site/docs/m18-python-inside-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-lab-has-three-phases", "describe": "lab.md has Phase 1, Phase 2 and Phase 3",
+      "run": "grep -c '## Phase [123]' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^3$" }, "weight": 1 },
+
+    { "id": "m18-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.3.0 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.3.0' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m18-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m18-lab-invokes-claude-explicitly", "describe": "lab.md has an explicit non-interactive Claude Code invocation of the updated skill",
+      "run": "grep -c 'claude -p' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-lab-invokes-codex-explicitly", "describe": "lab.md has an explicit non-interactive Codex invocation of the same updated skill file",
+      "run": "grep -c 'codex exec' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m18-lab-has-troubleshooting", "describe": "lab.md has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m18-python-inside-skills/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m18-quiz-question-count", "describe": "the quiz has at least 10 questions (course's 10-15 rule)",
+      "run": "grep -c 'prompt:' site/docs/m18-python-inside-skills/quiz.mdx",
+      "assert": { "matches": "^(1[0-5]|[1-9][0-9]+)$" }, "weight": 1 },
+
+    { "id": "m18-quiz-has-multiselect", "describe": "the quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m18-python-inside-skills/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 }
+  ]
+}
