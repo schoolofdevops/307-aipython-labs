@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m6-dd-write-resolved-config-never-opens-target-for-writing", "describe": "write_resolved_config never opens out_path directly for writing -- every write goes through a temp file first (section 1-2 evidence)",
+      "run": "grep -c 'out_path.*\"w\"' labs/checkpoints/v0.4/src/platformops/config.py",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m6-dd-write-resolved-config-uses-tempfile-and-replace", "describe": "write_resolved_config calls both tempfile.mkstemp and os.replace exactly once -- the two halves of the atomic-write pattern proven in sections 1-2",
+      "run": "grep -c 'tempfile\\.mkstemp(' labs/checkpoints/v0.4/src/platformops/config.py; grep -c 'os\\.replace(' labs/checkpoints/v0.4/src/platformops/config.py",
+      "assert": { "contains": "1\n1" }, "weight": 2 },
+
+    { "id": "m6-dd-safe-load-rejects-a-python-object-tag", "describe": "yaml.safe_load refuses a python/object/apply tag with a ConstructorError -- the mechanism section 4 demonstrates",
+      "run": "uv run --directory labs/checkpoints/v0.4 python3 -c \"import yaml\ntry:\n    yaml.safe_load('team_owner: !!python/object/apply:os.getcwd []')\n    print('NO ERROR RAISED')\nexcept yaml.YAMLError as e:\n    print(type(e).__name__)\"",
+      "assert": { "contains": "ConstructorError" }, "weight": 2 }
+  ]
+}

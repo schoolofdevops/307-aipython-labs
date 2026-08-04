@@ -1,0 +1,103 @@
+{
+  "checks": [
+    { "id": "m6-checkpoint-config-file-present", "describe": "the config module exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.4/src/platformops/config.py",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m6-checkpoint-tests-file-present", "describe": "the config test file exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.4/tests/test_config.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m6-checkpoint-service-yaml-present", "describe": "the example good service.yaml ships in the checkpoint",
+      "run": "ls labs/checkpoints/v0.4/service.yaml",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m6-checkpoint-service-bad-yaml-present", "describe": "the example bad service-bad.yaml ships in the checkpoint",
+      "run": "ls labs/checkpoints/v0.4/service-bad.yaml",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m6-checkpoint-pyyaml-in-pyproject", "describe": "pyyaml is declared as a project dependency",
+      "run": "grep -c 'pyyaml' labs/checkpoints/v0.4/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-pydantic-still-in-pyproject", "describe": "pydantic from v0.3 is still declared -- this module is additive, not a rewrite",
+      "run": "grep -c 'pydantic' labs/checkpoints/v0.4/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m6-checkpoint-only-two-deps-in-dependencies-block", "describe": "the dependencies array holds exactly two entries (pydantic, pyyaml) -- no dependency creep from Phase B",
+      "run": "sed -n '/dependencies = \\[/,/\\]/p' labs/checkpoints/v0.4/pyproject.toml | grep -c '\"'",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-pyyaml-in-lockfile", "describe": "pyyaml is resolved and pinned in uv.lock",
+      "run": "grep -c 'name = \"pyyaml\"' labs/checkpoints/v0.4/uv.lock",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.4.0 release version",
+      "run": "grep -c 'version = \"0.4.0\"' labs/checkpoints/v0.4/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m6-checkpoint-readme-names-v0-4", "describe": "README.md names the v0.4 release",
+      "run": "grep -c 'v0.4' labs/checkpoints/v0.4/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m6-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
+      "run": "cd labs/checkpoints/v0.4 && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/checkpoints/v0.4 && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m6-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- 25 tests: 19 carried from v0.3+Phase A, 6 from Phase B's env overrides, dry-run and JSON output",
+      "run": "cd labs/checkpoints/v0.4 && uv run pytest -q 2>&1",
+      "assert": { "contains": "25 passed" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-good-file-loads-and-validates", "describe": "the good example file loads and validates into a real ServiceDefinition instance",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from pathlib import Path; from platformops.config import load_service_yaml; from platformops.servicedef import ServiceDefinition; r = load_service_yaml(Path('service.yaml')); assert isinstance(r, ServiceDefinition); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-bad-file-surfaces-missing-field", "describe": "the bad example file fails validation and names the missing field",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from pathlib import Path; from platformops.config import load_service_yaml; errors = load_service_yaml(Path('service-bad.yaml')); assert isinstance(errors, list); assert any(e['loc'] == ('deployment_name',) and e['type'] == 'missing' for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-missing-file-raises-configerror", "describe": "a missing config file raises a clean ConfigError, not a raw traceback",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from pathlib import Path; from platformops.config import ConfigError, load_service_yaml; \nimport contextlib\ntry:\n    load_service_yaml(Path('does-not-exist.yaml'))\n    print('NO ERROR RAISED')\nexcept ConfigError as e:\n    print('OK', str(e))\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-invalid-yaml-raises-configerror", "describe": "invalid YAML content raises a clean ConfigError naming the problem as YAML, not a data problem",
+      "run": "cd labs/checkpoints/v0.4 && printf 'name: x\\n  bad: indent\\n' > /tmp/m6-broken.yaml && uv run python -c \"from pathlib import Path; from platformops.config import ConfigError, load_service_yaml\ntry:\n    load_service_yaml(Path('/tmp/m6-broken.yaml'))\n    print('NO ERROR RAISED')\nexcept ConfigError as e:\n    print('OK', str(e))\" && rm -f /tmp/m6-broken.yaml",
+      "assert": { "contains": "invalid YAML" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-env-override-beats-file-value", "describe": "apply_env_overrides prefers an environment variable over the file's value for a watched field",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from platformops.config import apply_env_overrides; r = apply_env_overrides({'environment': 'prod', 'region': 'us-east-1'}, environ={'PLATFORMOPS_ENVIRONMENT': 'staging'}); assert r['environment'] == 'staging' and r['region'] == 'us-east-1'; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-env-override-scoped-to-named-fields-only", "describe": "an env var for a field outside ENV_OVERRIDE_FIELDS has no effect -- the override scope is fixed",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from platformops.config import apply_env_overrides; r = apply_env_overrides({'aws_account': '111122223333'}, environ={'PLATFORMOPS_AWS_ACCOUNT': '999999999999'}); assert r['aws_account'] == '111122223333'; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-write-resolved-config-is-atomic-write", "describe": "write_resolved_config uses os.replace (source evidence of the atomic-write pattern)",
+      "run": "grep -c 'os.replace' labs/checkpoints/v0.4/src/platformops/config.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m6-checkpoint-cli-check-flag-writes-nothing", "describe": "running the CLI with --check does not create a resolved-config file",
+      "run": "cd /tmp && rm -rf m6-check-test && mkdir m6-check-test && cp /Users/gshah/work/courses/307/labs/checkpoints/v0.4/service.yaml m6-check-test/ && uv run --directory /Users/gshah/work/courses/307/labs/checkpoints/v0.4 python -m platformops.config /tmp/m6-check-test/service.yaml --check > /dev/null && test -f /tmp/m6-check-test/service.resolved.yaml && echo PRESENT || echo ABSENT && rm -rf /tmp/m6-check-test",
+      "assert": { "contains": "ABSENT" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-cli-without-check-writes-resolved-config", "describe": "running the CLI without --check writes a resolved-config file next to the input",
+      "run": "cd /tmp && rm -rf m6-write-test && mkdir m6-write-test && cp /Users/gshah/work/courses/307/labs/checkpoints/v0.4/service.yaml m6-write-test/ && uv run --directory /Users/gshah/work/courses/307/labs/checkpoints/v0.4 python -m platformops.config /tmp/m6-write-test/service.yaml > /dev/null && test -f /tmp/m6-write-test/service.resolved.yaml && echo PRESENT || echo ABSENT && rm -rf /tmp/m6-write-test",
+      "assert": { "contains": "PRESENT" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-cli-json-flag-emits-parseable-json", "describe": "the --json flag emits output that parses as JSON with an ok status",
+      "run": "cd /tmp && rm -rf m6-json-test && mkdir m6-json-test && cp /Users/gshah/work/courses/307/labs/checkpoints/v0.4/service.yaml m6-json-test/ && uv run --directory /Users/gshah/work/courses/307/labs/checkpoints/v0.4 python -m platformops.config /tmp/m6-json-test/service.yaml --check --json > /tmp/m6-json-test/out.json && python3 -c \"import json; d = json.load(open('/tmp/m6-json-test/out.json')); assert d['status'] == 'ok'; print('OK')\" && rm -rf /tmp/m6-json-test",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m6-checkpoint-servicedef-still-intact", "describe": "the v0.3 ServiceDefinition model still validates -- this module did not touch it",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE, ServiceDefinition; r = validate_service(GOOD_EXAMPLE); assert isinstance(r, ServiceDefinition); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 2 },
+
+    { "id": "m6-checkpoint-inventory-package-untouched", "describe": "the v0.2 inventory package is still intact -- this module's work is additive, not a rewrite of prior modules",
+      "run": "uv run --directory labs/checkpoints/v0.4 python -c \"from platformops.inventory import INVENTORY, find_missing_owner; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 2 }
+  ]
+}

@@ -143,6 +143,30 @@
   #sdRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
     font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
     max-height:22rem;overflow:auto}
+
+  /* ---------- configuration lens (M6) ---------- */
+  #config dl{display:grid;grid-template-columns:16rem 1fr;gap:5px 10px;font-size:.86rem}
+  #config dt{color:var(--faint)}
+  #config dd{font-family:var(--mono)}
+  #cfgEmpty{font-size:.9rem;color:var(--dim);line-height:1.5;padding:6px 2px}
+  #cfgEmpty code{color:var(--txt)}
+  #cfgErr{white-space:pre-wrap;color:var(--bad);font-family:var(--mono);font-size:.78rem;
+    margin-top:6px;line-height:1.4}
+  #cfgErr.hint{color:var(--warn)}
+  #cfgRawWrap{margin-top:8px}
+  #cfgRawWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #cfgRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
+    max-height:22rem;overflow:auto}
+  #cfgEnvWrap{margin-top:10px}
+  #cfgEnvWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #cfgEnvChips{display:flex;flex-wrap:wrap;gap:6px}
+  .envchip{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;color:var(--dim)}
+  .envchip.set{border-color:var(--warn);color:var(--warn)}
+  .envchip.notset{border-color:var(--line);color:var(--faint);opacity:.6}
 </style>
 </head>
 <body>
@@ -158,7 +182,8 @@
     <button class="tab" data-view="inventory">Inventory Reporter (M3)</button>
     <button class="tab" data-view="modulemap">Module Map (M4)</button>
     <button class="tab" data-view="servicedef">Service Definitions (M5)</button>
-    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M6+</button>
+    <button class="tab" data-view="config">Configuration (M6)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M7+</button>
   </div>
 
   <div id="viewLadder" class="view active">
@@ -313,6 +338,60 @@
       </div>
     </div>
   </div>
+
+  <div id="viewConfig" class="view">
+    <div class="panel" id="config">
+      <h2>Your service configuration, right now</h2>
+      <dl>
+        <dt>config.py file</dt><dd id="cfgModuleExists">–</dd>
+        <dt>Test files for it</dt><dd id="cfgTestCount">–</dd>
+        <dt>service.yaml present</dt><dd id="cfgServiceYamlExists">–</dd>
+        <dt>service-bad.yaml present</dt><dd id="cfgServiceBadYamlExists">–</dd>
+      </dl>
+
+      <div id="cfgEmpty" style="display:none">
+        You have not written <code>src/platformops/config.py</code> yet —
+        finish Module 6 to light this up. Once the file exists, this tab
+        will actually run it and show you its real output.
+      </div>
+
+      <div id="cfgRun" style="display:none">
+        <dl style="margin-top:8px">
+          <dt>Command run</dt><dd id="cfgCommand">–</dd>
+          <dt>Result</dt><dd id="cfgStatus">–</dd>
+        </dl>
+
+        <div id="cfgErr"></div>
+
+        <div id="cfgRawWrap">
+          <h2>Raw demo output</h2>
+          <pre id="cfgRaw"></pre>
+        </div>
+      </div>
+
+      <div id="cfgEnvWrap">
+        <h2>PLATFORMOPS_* overrides in this server's own environment</h2>
+        <div id="cfgEnvChips"></div>
+      </div>
+
+      <div id="note">
+        <b>What this shows:</b> whether you have written
+        <code>src/platformops/config.py</code> yet, whether your
+        <code>service.yaml</code> and <code>service-bad.yaml</code> fixture
+        files are present, and — once the file exists — a live run of your
+        own <code>python -m platformops.config service.yaml</code> (the
+        same 15-second time limit and <code>uv</code>-then-<code>python3</code>
+        fallback as the other live lenses). The fallback path deliberately
+        has no third-party packages installed yet (no <code>pyyaml</code>)
+        — if that is why the run failed, this tab shows a plain hint
+        instead of a wall of Python traceback. It also shows, by name only
+        and never by value, whether any of the <code>PLATFORMOPS_*</code>
+        environment variables Module 6 teaches are currently set in the
+        environment this server itself is running in — a fact about this
+        server process, not your file, so it works even before Module 6.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -324,6 +403,7 @@
     inventory: document.getElementById('viewInventory'),
     modulemap: document.getElementById('viewModuleMap'),
     servicedef: document.getElementById('viewServicedef'),
+    config: document.getElementById('viewConfig'),
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
@@ -594,6 +674,73 @@
       (demo.stdout && demo.stdout.trim()) ? demo.stdout : '(no output captured)';
   }
 
+  function renderConfig(data){
+    const cfg = data.config;
+    if (!cfg) return;
+
+    document.getElementById('cfgModuleExists').innerHTML = yesno(cfg.module_exists);
+    document.getElementById('cfgTestCount').textContent = String(cfg.test_file_count);
+    document.getElementById('cfgServiceYamlExists').innerHTML = yesno(cfg.service_yaml_exists);
+    document.getElementById('cfgServiceBadYamlExists').innerHTML = yesno(cfg.service_bad_yaml_exists);
+
+    const emptyEl = document.getElementById('cfgEmpty');
+    const runEl = document.getElementById('cfgRun');
+
+    if (!cfg.module_exists){
+      emptyEl.style.display = 'block';
+      runEl.style.display = 'none';
+    } else {
+      emptyEl.style.display = 'none';
+      runEl.style.display = 'block';
+
+      const demo = cfg.demo || {};
+      document.getElementById('cfgCommand').textContent = demo.command || '(not run)';
+
+      let statusHtml;
+      if (demo.timed_out){
+        statusHtml = '<span class="no">timed out</span>';
+      } else if (demo.error && demo.exit_code === null){
+        statusHtml = '<span class="no">could not run</span>';
+      } else if (demo.ok){
+        statusHtml = '<span class="yes">ran fine (exit 0)</span>';
+      } else {
+        statusHtml = '<span class="no">failed (exit ' + demo.exit_code + ')</span>';
+      }
+      document.getElementById('cfgStatus').innerHTML = statusHtml;
+
+      const errBox = document.getElementById('cfgErr');
+      errBox.classList.remove('hint');
+      if (!demo.ok){
+        if (demo.missing_dependency_hint){
+          errBox.classList.add('hint');
+          errBox.textContent = demo.missing_dependency_hint;
+        } else {
+          const parts = [];
+          if (demo.timed_out) parts.push(demo.error);
+          else if (demo.error) parts.push(demo.error);
+          if (demo.stderr_snippet) parts.push('What Python said (stderr):\n' + demo.stderr_snippet);
+          parts.push('Hint: run it yourself — "uv run python -m platformops.config service.yaml" ' +
+            'inside ~/platformops — to see the full error and fix it there.');
+          errBox.textContent = parts.join('\n\n');
+        }
+      } else {
+        errBox.textContent = '';
+      }
+
+      document.getElementById('cfgRaw').textContent =
+        (demo.stdout && demo.stdout.trim()) ? demo.stdout : '(no output captured)';
+    }
+
+    const envGrid = document.getElementById('cfgEnvChips');
+    envGrid.innerHTML = '';
+    (cfg.env_overrides || []).forEach(ev => {
+      const chip = document.createElement('span');
+      chip.className = 'envchip ' + (ev.set ? 'set' : 'notset');
+      chip.textContent = ev.name + ': ' + (ev.set ? 'set' : 'not set');
+      envGrid.appendChild(chip);
+    });
+  }
+
   async function loadState(){
     try{
       const res = await fetch('/api/state', {cache: 'no-store'});
@@ -610,6 +757,7 @@
       renderInventory(data);
       renderModuleMap(data);
       renderServicedef(data);
+      renderConfig(data);
     }catch(e){
       setConn(false);
     }

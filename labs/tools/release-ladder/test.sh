@@ -370,5 +370,165 @@ else
 fi
 
 echo
+echo "-- stage 6a: no config.py yet -- empty state --"
+STATE6A=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE6A" config.module_exists)" "False" "config.module_exists == False before Module 6"
+check "$(json_get "$STATE6A" config.service_yaml_exists)" "False" "config.service_yaml_exists == False before Module 6"
+check "$(json_get "$STATE6A" config.service_bad_yaml_exists)" "False" "config.service_bad_yaml_exists == False before Module 6"
+check "$(json_get "$STATE6A" config.demo)" "" "config.demo is null before Module 6"
+check "$(json_get "$STATE6A" config.env_overrides.0.name)" "PLATFORMOPS_ENVIRONMENT" "config.env_overrides[0].name == PLATFORMOPS_ENVIRONMENT (default field list)"
+check "$(json_get "$STATE6A" config.env_overrides.0.set)" "False" "config.env_overrides[0].set == False (not set in the test environment)"
+
+echo
+echo "-- stage 6b: config.py lands (M6), no pyyaml, no uv/network needed --"
+cat > service.yaml <<'EOF'
+name: checkout-api
+repository: github.com/example/checkout-api
+environment: prod
+team_owner: payments-team
+kubernetes_namespace: checkout
+deployment_name: checkout-api
+aws_account: "111122223333"
+region: us-east-1
+EOF
+
+cat > service-bad.yaml <<'EOF'
+name: checkout-api
+repository: github.com/example/checkout-api
+environment: prod
+team_owner: payments-team
+kubernetes_namespace: checkout
+aws_account: "111122223333"
+region: us-east-1
+EOF
+
+cat > src/platformops/config.py <<'EOF'
+"""Tiny fixture config validator -- stands in for the learner's real v0.4
+module so test.sh can exercise the Configuration lens without pyyaml, uv or
+network access. Deliberately stdlib-only (no `import yaml`) so it also runs
+fine under the fallback path's `-S` flag.
+"""
+
+import sys
+
+
+def main():
+    path = sys.argv[1] if len(sys.argv) > 1 else "service.yaml"
+    print(f"{path}: OK -- fixture-svc (prod/us-east-1) ns=checkout owner=payments-team")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+EOF
+
+cat > tests/test_config.py <<'EOF'
+def test_placeholder():
+    assert True
+EOF
+
+git add -A
+git commit -q -m "platformops v0.4 (fixture) -- configuration validator lands"
+
+STATE6B=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE6B" config.module_exists)" "True" "config.module_exists == True once config.py exists"
+check "$(json_get "$STATE6B" config.test_file_count)" "1" "config.test_file_count == 1"
+check "$(json_get "$STATE6B" config.service_yaml_exists)" "True" "config.service_yaml_exists == True"
+check "$(json_get "$STATE6B" config.service_bad_yaml_exists)" "True" "config.service_bad_yaml_exists == True"
+check "$(json_get "$STATE6B" config.demo.ok)" "True" "config.demo.ok == True (command ran fine)"
+check "$(json_get "$STATE6B" config.demo.missing_dependency_hint)" "" "config.demo.missing_dependency_hint is null when the fixture has no yaml import"
+
+CFG_CMD="$(json_get "$STATE6B" config.demo.command)"
+if printf '%s' "$CFG_CMD" | grep -q "fallback"; then
+  echo "  OK    config.demo.command used the documented uv-absent fallback"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  config.demo.command did not use the fallback (got [$CFG_CMD])"
+  FAIL=$((FAIL + 1))
+fi
+
+CFG_STDOUT="$(json_get "$STATE6B" config.demo.stdout)"
+if printf '%s' "$CFG_STDOUT" | grep -q "OK -- fixture-svc"; then
+  echo "  OK    config.demo.stdout contains the raw OK line"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  config.demo.stdout missing expected OK line"
+  FAIL=$((FAIL + 1))
+fi
+
+echo
+echo "-- stage 6c: config.py imports pyyaml -- graceful ModuleNotFoundError hint --"
+cat > src/platformops/config.py <<'EOF'
+"""Fixture that imports pyyaml on purpose, to exercise the fallback path's
+ModuleNotFoundError-hint. The server's fallback runs this under `python3 -S`
+(no site-packages), so this import fails the same way everywhere, regardless
+of whether pyyaml happens to be installed globally on the machine running
+this test.
+"""
+
+import sys
+
+import yaml  # noqa: F401  (deliberately third-party -- see module docstring)
+
+
+def main():
+    print("would validate", sys.argv[1] if len(sys.argv) > 1 else "service.yaml")
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
+STATE6C=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE6C" config.demo.ok)" "False" "config.demo.ok == False when pyyaml is missing"
+
+CFG_HINT="$(json_get "$STATE6C" config.demo.missing_dependency_hint)"
+if printf '%s' "$CFG_HINT" | grep -q "Run it yourself" && printf '%s' "$CFG_HINT" | grep -q "uv run python -m platformops.config service.yaml"; then
+  echo "  OK    config.demo.missing_dependency_hint shows the plain-English hint, not a traceback wall"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  config.demo.missing_dependency_hint missing or wrong (got [$CFG_HINT])"
+  FAIL=$((FAIL + 1))
+fi
+
+CFG_STDERR="$(json_get "$STATE6C" config.demo.stderr_snippet)"
+if printf '%s' "$CFG_STDERR" | grep -q "ModuleNotFoundError"; then
+  echo "  OK    config.demo.stderr_snippet still captures the real ModuleNotFoundError for debugging"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  config.demo.stderr_snippet missing expected ModuleNotFoundError text"
+  FAIL=$((FAIL + 1))
+fi
+
+echo
+echo "-- stage 6d: PLATFORMOPS_* override actually set -- server env is honestly reported --"
+ENV_PORT=$((PORT + 1))
+ENV_BASE="http://127.0.0.1:${ENV_PORT}"
+PATH="$SERVER_PATH" PLATFORMOPS_DIR="$TEST_DIR" PLATFORMOPS_REGION="eu-west-1" PORT="$ENV_PORT" \
+  python3 "$TOOL_DIR/serve.py" >/tmp/release-ladder-test-env.log 2>&1 &
+ENV_SERVER_PID=$!
+
+env_ready=0
+for _ in $(seq 1 40); do
+  if curl -s -o /dev/null "$ENV_BASE/"; then
+    env_ready=1
+    break
+  fi
+  sleep 0.25
+done
+
+if [ "$env_ready" -ne 1 ]; then
+  echo "  FAIL  second server (for env-override check) never came up"
+  FAIL=$((FAIL + 1))
+else
+  STATE6D=$(curl -s "$ENV_BASE/api/state")
+  check "$(json_get "$STATE6D" config.env_overrides.1.name)" "PLATFORMOPS_REGION" "config.env_overrides[1].name == PLATFORMOPS_REGION"
+  check "$(json_get "$STATE6D" config.env_overrides.1.set)" "True" "config.env_overrides[1].set == True when PLATFORMOPS_REGION is exported to the server"
+fi
+
+kill "$ENV_SERVER_PID" 2>/dev/null || true
+wait "$ENV_SERVER_PID" 2>/dev/null || true
+
+echo
 echo "== $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

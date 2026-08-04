@@ -2,26 +2,34 @@
 """Release Ladder — serve.py
 
 Shows the learner where they really are on the PlatformOps release ladder
-(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus four
+(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus five
 lenses: a Project Foundation panel (M2) with the real state of the
 learner's own `~/platformops` project, an Inventory Reporter panel (M3)
 that actually runs the learner's own `src/platformops/inventory.py` and
 shows its real output, a Module Map panel (M4) that shows the real
 package structure of `src/platformops/inventory/` once the M4 refactor
-splits the single file into a package, and a Service Definitions panel
+splits the single file into a package, a Service Definitions panel
 (M5) that reads the real shape of `src/platformops/servicedef.py` (its
 `ServiceDefinition` field count and whether constraint markers like
 `Literal[` and `pattern=` are present) and runs the learner's own
-`python -m platformops.servicedef` demo.
+`python -m platformops.servicedef` demo, and a Configuration panel (M6)
+that reads whether `src/platformops/config.py`, `service.yaml` and
+`service-bad.yaml` exist, runs the learner's own
+`python -m platformops.config service.yaml` demo, and reports (by name
+only, never by value) whether any of the `PLATFORMOPS_*` env-override
+variables Module 6 teaches are set in this server's own environment.
 
 Zero third-party dependencies. Python 3 standard library only. Mostly
 read-only: it runs `git tag` / `git status` / `git rev-parse` (never a
-write command) and reads files on disk. The exceptions are the M3 and M5
-lenses, which run the learner's own `python -m platformops.inventory` and
-`python -m platformops.servicedef` (their own modules) so they can show the
-real output — they never run ruff, pytest, or anything that installs or
-writes to their project. The M4 lens only reads file text (line counts,
-`def ` counts) — it never imports or executes the learner's package.
+write command) and reads files on disk. The exceptions are the M3, M5 and
+M6 lenses, which run the learner's own `python -m platformops.inventory`,
+`python -m platformops.servicedef` and `python -m platformops.config`
+(their own modules) so they can show the real output — they never run
+ruff, pytest, or anything that installs to their project (the M6 module
+itself can write a small `service.resolved.yaml`, the same file the
+learner's own command would write; this tool does nothing beyond running
+it). The M4 lens only reads file text (line counts, `def ` counts) — it
+never imports or executes the learner's package.
 
 Usage:
     python3 serve.py                        # uses ~/platformops (or $PLATFORMOPS_DIR)
@@ -671,6 +679,189 @@ def read_servicedef(directory: str) -> dict:
     return {**source, "demo": demo, "result_lines": result_lines}
 
 
+CONFIG_ENV_PREFIX_RE = re.compile(r'(?m)^ENV_PREFIX\s*=\s*"([^"]*)"')
+CONFIG_ENV_FIELDS_RE = re.compile(r'(?ms)^ENV_OVERRIDE_FIELDS\s*=\s*\(([^)]*)\)')
+DEFAULT_ENV_PREFIX = "PLATFORMOPS_"
+DEFAULT_ENV_OVERRIDE_FIELDS = ("environment", "region", "team_owner", "kubernetes_namespace")
+
+
+def find_config_tests(directory: str) -> int:
+    """Count test files for the config module (e.g. tests/test_config.py).
+
+    Matches `tests/test_config*.py` so small naming variants still count.
+    """
+    if not os.path.isdir(directory):
+        return 0
+    return len(glob.glob(os.path.join(directory, "tests", "test_config*.py")))
+
+
+def parse_env_override_names(text: str | None) -> list[str]:
+    """Which PLATFORMOPS_<FIELD> env var names Module 6's override list
+    names. A defensive, regex-only parse of `config.py`'s own `ENV_PREFIX`
+    and `ENV_OVERRIDE_FIELDS` constants when the file exists and declares
+    them; falls back to the module's documented default list otherwise, so
+    this still shows something useful before the learner has customized (or
+    even written) the file. Never imports the learner's code.
+    """
+    prefix = DEFAULT_ENV_PREFIX
+    fields = list(DEFAULT_ENV_OVERRIDE_FIELDS)
+    if text:
+        try:
+            m = CONFIG_ENV_PREFIX_RE.search(text)
+            if m and m.group(1):
+                prefix = m.group(1)
+            m = CONFIG_ENV_FIELDS_RE.search(text)
+            if m:
+                found = re.findall(r'"([^"]+)"', m.group(1))
+                if found:
+                    fields = found
+        except Exception:  # noqa: BLE001 - parsing is a bonus, never fatal
+            pass
+    return [f"{prefix}{field.upper()}" for field in fields]
+
+
+def read_env_overrides(text: str | None) -> list[dict]:
+    """The env-override facts for the M6 lens: for each PLATFORMOPS_<FIELD>
+    env var Module 6's override list names, whether it is currently set in
+    *this server process's own environment*. Names only, never values — the
+    tool never prints what an env var is set to, only whether it is set, so
+    this tab stays safe to leave open even if a learner's shell exports
+    something sensitive under a similar-looking name.
+    """
+    names = parse_env_override_names(text)
+    return [{"name": name, "set": name in os.environ} for name in names]
+
+
+def read_config_source(directory: str) -> dict:
+    """Real, cheap-to-derive facts about the learner's
+    `src/platformops/config.py`, plus the two fixture YAML files Module 6's
+    lab has the learner create (`service.yaml`, `service-bad.yaml`). Only
+    reads file text and checks existence — never imports or executes
+    anything. Returns the raw source text too (private, stripped before the
+    JSON response) so the caller can derive the env-override field names
+    from it without a second file read.
+    """
+    module_path = os.path.join(directory, "src", "platformops", "config.py")
+    module_exists = os.path.isfile(module_path)
+    test_file_count = find_config_tests(directory)
+    service_yaml_exists = os.path.isfile(os.path.join(directory, "service.yaml"))
+    service_bad_yaml_exists = os.path.isfile(os.path.join(directory, "service-bad.yaml"))
+
+    text = None
+    if module_exists:
+        try:
+            with open(module_path, "r", encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            text = None
+
+    return {
+        "module_exists": module_exists,
+        "test_file_count": test_file_count,
+        "service_yaml_exists": service_yaml_exists,
+        "service_bad_yaml_exists": service_bad_yaml_exists,
+        "_text": text,
+    }
+
+
+def run_config_demo(directory: str) -> dict:
+    """Run `python -m platformops.config service.yaml` inside `directory`
+    and capture its output — the M6 lens. Uses the same uv-then-python3
+    fallback pattern as the Inventory Reporter and Service Definitions
+    lenses.
+
+    Unlike those two, `platformops.config` depends on `pyyaml`, a
+    third-party package — not something the plain-`python3` fallback path
+    has, on purpose: that path only points `PYTHONPATH` at the learner's
+    `src/`, nothing installed. To make that "no dependencies" promise real
+    rather than accidental (it should not quietly succeed just because
+    pyyaml happens to already be installed somewhere else on the machine
+    running this tool), the fallback runs with Python's `-S` flag, which
+    skips site-packages entirely. That way a learner who has not yet run
+    `uv add pyyaml` / `uv sync` sees the same `ModuleNotFoundError` this
+    lens is built to detect and explain gracefully — everywhere, not just
+    on machines that happen to lack a global pyyaml install.
+    """
+    uv_path = shutil.which("uv")
+    venv_exists = os.path.isdir(os.path.join(directory, ".venv"))
+
+    env = None
+    if uv_path and venv_exists:
+        cmd = [uv_path, "run", "python", "-m", "platformops.config", "service.yaml"]
+        command_label = "uv run python -m platformops.config service.yaml"
+    else:
+        cmd = [sys.executable, "-S", "-m", "platformops.config", "service.yaml"]
+        command_label = (
+            "python3 -m platformops.config service.yaml  (fallback: uv or .venv not "
+            "found, using PYTHONPATH=src)"
+        )
+        env = dict(os.environ)
+        src_dir = os.path.join(directory, "src")
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = src_dir + (os.pathsep + existing if existing else "")
+
+    result = {
+        "attempted": True,
+        "command": command_label,
+        "ok": False,
+        "exit_code": None,
+        "timed_out": False,
+        "stdout": "",
+        "stderr_snippet": None,
+        "error": None,
+        "missing_dependency_hint": None,
+    }
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=INVENTORY_TIMEOUT_SECS,
+            env=env,
+        )
+        result["exit_code"] = proc.returncode
+        result["ok"] = proc.returncode == 0
+        result["stdout"] = proc.stdout or ""
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            result["stderr_snippet"] = stderr[:STDERR_SNIPPET_MAX_CHARS]
+            if "ModuleNotFoundError" in stderr:
+                result["missing_dependency_hint"] = (
+                    "This fallback path deliberately has no third-party packages "
+                    "installed yet (no pyyaml). Run it yourself: "
+                    "uv run python -m platformops.config service.yaml"
+                )
+    except subprocess.TimeoutExpired:
+        result["timed_out"] = True
+        result["error"] = (
+            f"The command took longer than {INVENTORY_TIMEOUT_SECS}s and was stopped."
+        )
+    except OSError as exc:
+        result["error"] = f"Could not run the command ({exc})."
+
+    return result
+
+
+def read_config(directory: str) -> dict:
+    """The M6 lens: real facts about the learner's
+    `src/platformops/config.py` and the `service.yaml` / `service-bad.yaml`
+    fixtures Module 6 has them create, the env-override facts (see
+    `read_env_overrides`), and — once the file exists — a live run of
+    `python -m platformops.config service.yaml` (see `run_config_demo`).
+    """
+    source = read_config_source(directory)
+    text = source.pop("_text")
+    env_overrides = read_env_overrides(text)
+
+    if not source["module_exists"]:
+        return {**source, "env_overrides": env_overrides, "demo": None}
+
+    demo = run_config_demo(directory)
+    return {**source, "env_overrides": env_overrides, "demo": demo}
+
+
 def build_ladder_state(tags_present: list[str]) -> dict:
     tag_set = set(tags_present)
     flat = flat_releases()
@@ -729,6 +920,7 @@ def build_state() -> dict:
     inventory = read_inventory(directory)
     module_map = read_module_map(directory)
     servicedef = read_servicedef(directory)
+    config = read_config(directory)
     return {
         "platformops_dir": directory,
         "foundation": foundation,
@@ -736,6 +928,7 @@ def build_state() -> dict:
         "inventory": inventory,
         "module_map": module_map,
         "servicedef": servicedef,
+        "config": config,
     }
 
 
