@@ -15,6 +15,8 @@ use the matching folder here instead.
 - `v0.1/` — end of Module 3 (Infrastructure Inventory Reporter)
 - `v0.2/` — end of Module 4 (Modular Inventory Engine)
 - `v0.3/` — end of Module 5 (Service Definition Model)
+- `v0.4/` — end of Module 6 (Service Configuration Validator)
+- `v0.5/` — end of Module 7 (Reliable Validation and Diagnostics)
 
 (More folders are added as later modules ship.)
 
@@ -72,10 +74,29 @@ git add -A && git commit -m "platformops v0.2 — Modular Inventory Engine" && g
 uv sync && uv run pytest -q
 ```
 
+Continue the same pattern for every later release you had reached — copy the next checkpoint,
+commit, tag. If this is a fresh machine, tell git who you are once before the first commit:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
 Each checkpoint becomes one commit with its release tag, so `git tag` and the Release Ladder
-tool show the same history a learner who never lost their project would have. When a step
-between two checkpoints deleted a file (like the v0.2 package split above), remove it before
-copying the next checkpoint — the module's own lab page tells you when that happened.
+tool show the same history a learner who never lost their project would have.
+
+**When does a step need a deletion first?** Only when a release removed or moved a file. This
+table lists every such case so far:
+
+| Replay step | Before copying, run |
+|---|---|
+| v0.1 → v0.2 | `rm src/platformops/inventory.py` (split into a package) |
+| every other step so far | nothing — each later release only adds files |
+
+You can always verify this yourself before copying: `diff -rq
+~/307-aipython-labs/labs/checkpoints/v0.2 ~/307-aipython-labs/labs/checkpoints/v0.3` lists
+which files differ or exist on only one side — a file that exists only in the OLDER checkpoint
+is one you should delete before copying the newer one.
 
 ## Worked example
 
