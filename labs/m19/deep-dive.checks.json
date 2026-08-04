@@ -1,0 +1,111 @@
+{
+  "checks": [
+    { "id": "m19-dd-file-exists", "describe": "deep-dive.md exists for M19",
+      "run": "test -f site/docs/m19-service-readiness-skill/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m19-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c 'Use it when:' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m19-dd-no-unfilled-placeholders", "describe": "all expected output blocks have been folded with real captured output",
+      "run": "grep -c '<expected output — folded in during live lab validation>' site/docs/m19-service-readiness-skill/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-dd-does-not-use-bare-diff", "describe": "deep dive never asks the learner to run bare diff -- a shell hook can make it misreport differing files as identical, so every comparison uses cmp instead",
+      "run": "grep -c 'diff ' site/docs/m19-service-readiness-skill/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-uses-cmp", "describe": "deep dive uses cmp for its determinism proof",
+      "run": "grep -c 'cmp /tmp' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-dd-covers-confidence-math", "describe": "deep dive shows the actual compute_confidence output across the full known-count range, not just a description of it",
+      "run": "grep -c 'compute_confidence' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-dd-confidence-table-real-values", "describe": "the folded confidence table shows the real 3/5 known -> medium ceiling the lesson claims",
+      "run": "grep -c '3 /5 known -> medium' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-covers-adapter-composition-grep", "describe": "deep dive greps for the absence of raw subprocess/httpx/yaml imports in the orchestrator, proving composition rather than reimplementation",
+      "run": "grep -c '\\^import subprocess' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m19-dd-covers-adapter-contrast-grep", "describe": "deep dive contrasts the orchestrator against the real adapters that do import subprocess/httpx/yaml",
+      "run": "grep -c \"grep -c 'import subprocess' src/platformops/local_ops.py\" site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-dd-covers-read-only-grep", "describe": "deep dive greps for the absence of write-mode open() and git commit/push in both the script and the skill",
+      "run": "grep -c \"open(.\\*'w\" site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m19-dd-covers-git-commit-absence", "describe": "deep dive checks for the absence of git commit/push in the script and the skill",
+      "run": "grep -c 'git commit' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-dd-analogy-switchboard", "describe": "deep dive uses a new analogy (switchboard operator) for the composition concept",
+      "run": "grep -ci 'switchboard' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-dd-analogy-museum-guide", "describe": "deep dive uses a new analogy (museum tour guide) for the read-only enforcement concept",
+      "run": "grep -ci 'museum' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-dd-live-subprocess-import-absent", "describe": "live check: the real orchestrator script still has zero raw subprocess imports",
+      "run": "cd labs/platformops && grep -c '^import subprocess' scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-live-httpx-import-absent", "describe": "live check: the real orchestrator script still has zero raw httpx imports",
+      "run": "cd labs/platformops && grep -c '^import httpx' scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-live-yaml-import-absent", "describe": "live check: the real orchestrator script still has zero raw yaml imports",
+      "run": "cd labs/platformops && grep -c '^import yaml' scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-live-no-write-open-in-script", "describe": "live check: the real script has zero write-mode open() calls",
+      "run": "cd labs/platformops && grep -c \"open(.*'w\" scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-live-no-write-open-in-skill", "describe": "live check: the real skill file has zero write-mode open() calls",
+      "run": "cd labs/platformops && grep -c \"open(.*'w\" .claude/skills/platformops-service-readiness/SKILL.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-dd-live-determinism", "describe": "live check: running the script twice against the same file produces byte-identical output (cmp, not diff)",
+      "run": "cd labs/platformops && uv run python scripts/service_readiness.py service.yaml > /tmp/m19-dd-check1.json 2>/dev/null; uv run python scripts/service_readiness.py service.yaml > /tmp/m19-dd-check2.json 2>/dev/null; cmp /tmp/m19-dd-check1.json /tmp/m19-dd-check2.json && echo identical || echo differs; rm -f /tmp/m19-dd-check1.json /tmp/m19-dd-check2.json",
+      "assert": { "contains": "identical" }, "weight": 3 },
+
+    { "id": "m19-dd-live-tests-still-pass", "describe": "regression: the real project's test suite still passes -- nothing on this page touched it",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m19-dd-real-project-version-is-1-4-0", "describe": "the real project's version is already 1.4.0 -- the lab's version bump happened before this deep dive runs",
+      "run": "grep -c 'version = \"1.4.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

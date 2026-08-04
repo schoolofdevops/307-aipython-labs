@@ -1,0 +1,275 @@
+{
+  "checks": [
+    { "id": "m19-script-exists", "describe": "scripts/service_readiness.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.4.0/scripts/service_readiness.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m19-script-has-shebang", "describe": "the script has a shebang line",
+      "run": "head -1 labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "contains": "#!/usr/bin/env python3" }, "weight": 1 },
+
+    { "id": "m19-script-imports-config", "describe": "the script imports load_yaml_dict from the tested package",
+      "run": "grep -c 'from platformops.config import' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-script-imports-servicedef", "describe": "the script imports validate_service from the tested package",
+      "run": "grep -c 'from platformops.servicedef import validate_service' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-script-imports-local-ops", "describe": "the script imports git_status from the tested package",
+      "run": "grep -c 'from platformops.local_ops import git_status' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-script-imports-httpclient", "describe": "the script imports list_workflow_runs from the tested package",
+      "run": "grep -c 'list_workflow_runs' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m19-script-no-raw-subprocess-import", "describe": "the orchestrator never imports subprocess directly -- it only calls git_status()",
+      "run": "grep -c '^import subprocess' labs/checkpoints/v1.4.0/scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m19-script-no-raw-httpx-import", "describe": "the orchestrator never imports httpx directly -- it only calls list_workflow_runs()",
+      "run": "grep -c '^import httpx' labs/checkpoints/v1.4.0/scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m19-script-no-raw-yaml-import", "describe": "the orchestrator never imports yaml directly -- it only calls load_yaml_dict()",
+      "run": "grep -c '^import yaml' labs/checkpoints/v1.4.0/scripts/service_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m19-script-prints-json", "describe": "the script uses json.dumps to produce output",
+      "run": "grep -c 'json.dumps' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-script-has-exit-0-path", "describe": "the script returns exit code 0 when nothing failed",
+      "run": "grep -c 'return report, (1 if has_failure else 0)' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-script-has-exit-2-path", "describe": "the script returns exit code 2 when no evidence could be gathered",
+      "run": "grep -c 'return report, 2' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-script-cloud-literal-unknown", "describe": "the cloud section is a fixed unknown dict naming the future module",
+      "run": "grep -c 'no AWS adapter yet (Module 21+)' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-script-kubernetes-literal-unknown", "describe": "the kubernetes section is a fixed unknown dict naming the future module",
+      "run": "grep -c 'no Kubernetes adapter yet (Module 28+)' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-script-has-compute-confidence", "describe": "the confidence computation is its own named, callable function",
+      "run": "grep -c 'def compute_confidence' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-script-uses-sys-exit", "describe": "the script exits via sys.exit(main())",
+      "run": "grep -c 'sys.exit(main())' labs/checkpoints/v1.4.0/scripts/service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-script-exit-2-on-missing-file-live", "describe": "live check: the script exits 2 when the service definition file could not be read",
+      "run": "cd labs/platformops && uv run python scripts/service_readiness.py service-does-not-exist.yaml >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m19-script-emits-valid-json-live", "describe": "live check: the script's stdout parses as JSON",
+      "run": "cd labs/platformops && uv run python scripts/service_readiness.py service.yaml 2>/dev/null | python3 -c 'import json,sys; json.load(sys.stdin)' && echo valid-json",
+      "assert": { "contains": "valid-json" }, "weight": 2 },
+
+    { "id": "m19-live-cloud-kubernetes-unknown", "describe": "live check: cloud and kubernetes sections report status unknown regardless of other inputs",
+      "run": "cd labs/platformops && uv run python scripts/service_readiness.py service.yaml 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print('ok' if d['cloud']['status']=='unknown' and d['kubernetes']['status']=='unknown' else 'BAD')\"",
+      "assert": { "contains": "ok" }, "weight": 3 },
+
+    { "id": "m19-live-confidence-never-high", "describe": "live check: overall_confidence never reports high (2 of 5 sections are always unknown today)",
+      "run": "cd labs/platformops && uv run python scripts/service_readiness.py service.yaml 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print('ok' if d['overall_confidence'] in ('low','medium') else 'BAD-'+d['overall_confidence'])\"",
+      "assert": { "contains": "ok" }, "weight": 3 },
+
+    { "id": "m19-skill-exists", "describe": "the new platformops-service-readiness skill exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m19-skill-is-separate-from-m18-skill", "describe": "the M17/M18 service-readiness-review skill was not touched by this module",
+      "run": "grep -c 'scripts/review-service.py' labs/checkpoints/v1.4.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-skill-calls-script", "describe": "the new skill tells the agent to run scripts/service_readiness.py",
+      "run": "grep -c 'scripts/service_readiness.py' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m19-skill-has-eight-sections", "describe": "the skill has all eight required body sections",
+      "run": "grep -c '^## ' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m19-skill-step-count-in-range", "describe": "the Steps section has between 4 and 8 numbered steps",
+      "run": "grep -cE '^[0-9]+\\. ' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^[4-8]$" }, "weight": 2 },
+
+    { "id": "m19-skill-no-re-derive", "describe": "the skill tells the agent not to re-derive fields from the script's report",
+      "run": "grep -ci 're-derive\\|recompute\\|second-guess' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-skill-core-has-no-agent-name", "describe": "the required core (before Optional extensions) never names one coding agent",
+      "run": "awk '/^## Optional extensions/{exit} {print}' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md | grep -ci claude; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m19-skill-no-python-code", "describe": "the skill's steps do not reimplement any evidence gathering as inline Python",
+      "run": "grep -c '```python' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-skill-mentions-unknown-handling", "describe": "the skill tells the agent to relay the unknown cloud/kubernetes sections rather than dropping them",
+      "run": "grep -ci 'unknown' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-skill-is-read-only", "describe": "the skill explicitly states it never writes, edits, deletes, commits or deploys",
+      "run": "grep -c 'does not write, edit, or delete any file' labs/checkpoints/v1.4.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-tests-exist", "describe": "tests/test_service_readiness.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.4.0/tests/test_service_readiness.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m19-tests-cover-exit-0", "describe": "tests include a passing (exit 0) case",
+      "run": "grep -c 'exit_code == 0' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-exit-1", "describe": "tests include a failure (exit 1) case",
+      "run": "grep -c 'exit_code == 1' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-exit-2", "describe": "tests include a missing-file (exit 2) case",
+      "run": "grep -c 'exit_code == 2' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-dirty-tree", "describe": "tests include a dirty source-control case",
+      "run": "grep -ci 'DIRTY' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-failing-ci", "describe": "tests include a failing CI run case",
+      "run": "grep -c 'test_failing_ci' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-config-failure", "describe": "tests include a config validation failure case",
+      "run": "grep -c 'test_config_validation_failure' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-tests-cover-cloud-kubernetes-unknown", "describe": "tests assert cloud and kubernetes are always literal unknown",
+      "run": "grep -c 'test_cloud_and_kubernetes_are_always_literal_unknown' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-tests-cover-compute-confidence-directly", "describe": "tests exercise compute_confidence() directly, not only through gather_report()",
+      "run": "grep -c 'service_readiness.compute_confidence(' labs/checkpoints/v1.4.0/tests/test_service_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-test-service-cleaned-up", "describe": "Teardown: the throwaway test-service.yaml was removed from the live project",
+      "run": "test -f labs/platformops/test-service.yaml && echo still-present || echo cleaned",
+      "assert": { "contains": "cleaned" }, "weight": 2 },
+
+    { "id": "m19-version-bumped", "describe": "pyproject.toml is bumped to 1.4.0",
+      "run": "grep -c 'version = \"1.4.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m19-changelog-has-1-4-0-section", "describe": "CHANGELOG.md has a [1.4.0] release section",
+      "run": "grep -c '## \\[1.4.0\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-changelog-mentions-script", "describe": "the [1.4.0] entry documents the new script",
+      "run": "grep -c 'service_readiness.py' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-changelog-mentions-skill", "describe": "the [1.4.0] entry documents the new skill",
+      "run": "grep -c 'platformops-service-readiness' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-changelog-unreleased-reset", "describe": "the [Unreleased] section is empty again -- its prior entry moved into [1.4.0]",
+      "run": "sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' labs/platformops/CHANGELOG.md | sed '1d;$d' | tr -d '[:space:]' | wc -c | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-no-source-code-touched", "describe": "src/platformops/ is untouched by this module -- all new logic lives in scripts/",
+      "run": "cd labs/platformops && git status --porcelain src/platformops/ | wc -l | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-cli-still-works", "describe": "regression: the CLI still runs after this module's work",
+      "run": "cd labs/platformops && uv run platformops --help > /dev/null 2>&1 && echo cli-ok || echo cli-fail",
+      "assert": { "contains": "cli-ok" }, "weight": 2 },
+
+    { "id": "m19-cli-version-is-1-4-0", "describe": "regression: uv run platformops version reports 1.4.0",
+      "run": "cd labs/platformops && uv run platformops version",
+      "assert": { "contains": "1.4.0" }, "weight": 2 },
+
+    { "id": "m19-tests-still-pass", "describe": "regression: the full live test suite still passes at the new version",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m19-checkpoint-v1-3-0-regression-safe", "describe": "regression: the frozen v1.3.0 checkpoint this module started from still passes its own tests, untouched",
+      "run": "cd labs/checkpoints/v1.3.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m19-checkpoint-v1-4-0-no-venv", "describe": "the v1.4.0 checkpoint was snapshotted without .venv, per the versioned-checkpoint hard rule",
+      "run": "test -d labs/checkpoints/v1.4.0/.venv && echo present || echo absent",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m19-checkpoint-v1-4-0-version", "describe": "the v1.4.0 checkpoint's pyproject.toml records the bumped version",
+      "run": "grep -c 'version = \"1.4.0\"' labs/checkpoints/v1.4.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m19-service-readiness-skill/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-lesson-covers-preflight-analogy", "describe": "the lesson uses the pre-flight checklist analogy",
+      "run": "grep -ci 'pre-flight' site/docs/m19-service-readiness-skill/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-lesson-covers-honest-unknown", "describe": "the lesson explicitly teaches the honest-unknown-beats-a-guess lesson",
+      "run": "grep -ci 'unknown' site/docs/m19-service-readiness-skill/lesson.md",
+      "assert": { "matches": "^[1-9][0-9]*$" }, "weight": 2 },
+
+    { "id": "m19-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m19-service-readiness-skill/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-lesson-avoids-insider-jargon", "describe": "the lesson does not use the banned insider jargon terms",
+      "run": "grep -ci 'vertical slice\\|scaffold\\|\\bseam\\b' site/docs/m19-service-readiness-skill/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m19-lab-has-three-phases", "describe": "lab.md has Phase 1, Phase 2 and Phase 3",
+      "run": "grep -c '^## Phase [123]' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^3$" }, "weight": 1 },
+
+    { "id": "m19-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.4.0 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.4.0' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-lab-invokes-claude-explicitly", "describe": "lab.md has an explicit non-interactive Claude Code invocation of the new skill",
+      "run": "grep -c 'claude -p' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-lab-invokes-codex-explicitly", "describe": "lab.md has an explicit non-interactive Codex invocation of the same skill file",
+      "run": "grep -c 'codex exec' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-lab-has-troubleshooting", "describe": "lab.md has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m19-lab-imports-not-reimplements", "describe": "lab.md's script listing shows the orchestrator importing, not reimplementing, evidence logic",
+      "run": "grep -c 'from platformops.local_ops import git_status' site/docs/m19-service-readiness-skill/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m19-quiz-question-count", "describe": "the quiz has between 10 and 15 questions (course's 10-15 rule)",
+      "run": "grep -c 'prompt:' site/docs/m19-service-readiness-skill/quiz.mdx",
+      "assert": { "matches": "^(1[0-5])$" }, "weight": 1 },
+
+    { "id": "m19-quiz-has-multiselect", "describe": "the quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m19-service-readiness-skill/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m19-deep-dive-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m19-deep-dive-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m19-service-readiness-skill/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
