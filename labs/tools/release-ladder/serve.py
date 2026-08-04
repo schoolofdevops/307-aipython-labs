@@ -2,22 +2,26 @@
 """Release Ladder — serve.py
 
 Shows the learner where they really are on the PlatformOps release ladder
-(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus three
+(v0.0 -> v3.0, 37 tagged releases across 10 parts of the course) plus four
 lenses: a Project Foundation panel (M2) with the real state of the
 learner's own `~/platformops` project, an Inventory Reporter panel (M3)
 that actually runs the learner's own `src/platformops/inventory.py` and
-shows its real output, and a Module Map panel (M4) that shows the real
+shows its real output, a Module Map panel (M4) that shows the real
 package structure of `src/platformops/inventory/` once the M4 refactor
-splits the single file into a package.
+splits the single file into a package, and a Service Definitions panel
+(M5) that reads the real shape of `src/platformops/servicedef.py` (its
+`ServiceDefinition` field count and whether constraint markers like
+`Literal[` and `pattern=` are present) and runs the learner's own
+`python -m platformops.servicedef` demo.
 
 Zero third-party dependencies. Python 3 standard library only. Mostly
 read-only: it runs `git tag` / `git status` / `git rev-parse` (never a
-write command) and reads files on disk. The one exception is the M3 lens,
-which runs the learner's own `python -m platformops.inventory` (their v0.1
-report) so it can show the real report — it never runs ruff, pytest, or
-anything that installs or writes to their project. The M4 lens only reads
-file text (line counts, `def ` counts) — it never imports or executes the
-learner's package.
+write command) and reads files on disk. The exceptions are the M3 and M5
+lenses, which run the learner's own `python -m platformops.inventory` and
+`python -m platformops.servicedef` (their own modules) so they can show the
+real output — they never run ruff, pytest, or anything that installs or
+writes to their project. The M4 lens only reads file text (line counts,
+`def ` counts) — it never imports or executes the learner's package.
 
 Usage:
     python3 serve.py                        # uses ~/platformops (or $PLATFORMOPS_DIR)
@@ -488,6 +492,185 @@ def read_module_map(directory: str) -> dict:
     }
 
 
+def find_servicedef_tests(directory: str) -> int:
+    """Count test files for the service definition module (e.g.
+    tests/test_servicedef.py). Matches `tests/test_servicedef*.py` so small
+    naming variants still count.
+    """
+    if not os.path.isdir(directory):
+        return 0
+    return len(glob.glob(os.path.join(directory, "tests", "test_servicedef*.py")))
+
+
+SERVICEDEF_FIELD_LINE_RE = re.compile(r"^(\w+)\s*:\s*.+$")
+SERVICEDEF_CLASS_RE = re.compile(
+    r"class\s+ServiceDefinition\b[^\n:]*:\n(.*?)(?=\n\S|\Z)", re.S
+)
+
+
+def count_servicedef_fields(text: str) -> int | None:
+    """Defensive, regex-only count of `ServiceDefinition`'s annotated class
+    fields (e.g. `name: str`). Reads the class body as plain text up to the
+    first method (`def `) or decorator and counts lines at the class's own
+    indent level that look like `<word>: <something>`. Never imports or
+    executes the learner's code. Returns None if the class cannot be found.
+    """
+    try:
+        m = SERVICEDEF_CLASS_RE.search(text)
+        if not m:
+            return None
+        base_indent = None
+        count = 0
+        for ln in m.group(1).splitlines():
+            if not ln.strip():
+                continue
+            indent = len(ln) - len(ln.lstrip())
+            if base_indent is None:
+                base_indent = indent
+            if indent != base_indent:
+                continue  # a wrapped/nested line, not a top-level field
+            stripped = ln.strip()
+            if stripped.startswith("def ") or stripped.startswith("@"):
+                break  # fields section ended, methods start here
+            if SERVICEDEF_FIELD_LINE_RE.match(stripped):
+                count += 1
+        return count
+    except Exception:  # noqa: BLE001 - parsing is a bonus, never fatal
+        return None
+
+
+def read_servicedef_source(directory: str) -> dict:
+    """Real, cheap-to-derive facts about the learner's
+    `src/platformops/servicedef.py`: does it exist, how many test files does
+    it have, how many fields does `ServiceDefinition` declare, and does the
+    file contain the constraint markers (`Literal[`, `pattern=`) that Phase B
+    of Module 5 adds. Only reads file text — never imports or executes it.
+    """
+    module_path = os.path.join(directory, "src", "platformops", "servicedef.py")
+    module_exists = os.path.isfile(module_path)
+    test_file_count = find_servicedef_tests(directory)
+
+    field_count = None
+    has_literal_constraint = False
+    has_pattern_constraint = False
+
+    if module_exists:
+        try:
+            with open(module_path, "r", encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            text = ""
+        field_count = count_servicedef_fields(text)
+        has_literal_constraint = "Literal[" in text
+        has_pattern_constraint = "pattern=" in text
+
+    return {
+        "module_exists": module_exists,
+        "test_file_count": test_file_count,
+        "field_count": field_count,
+        "has_literal_constraint": has_literal_constraint,
+        "has_pattern_constraint": has_pattern_constraint,
+    }
+
+
+def run_servicedef_demo(directory: str) -> dict:
+    """Run `python -m platformops.servicedef` inside `directory` and capture
+    its output. Read-only from this tool's point of view: it runs the
+    learner's own module, never edits anything.
+
+    Uses the same uv-then-python3-fallback pattern as `run_inventory_report`:
+    tries `uv run python -m platformops.servicedef` first, and falls back to
+    plain `python3 -m platformops.servicedef` with `PYTHONPATH` pointed at
+    the project's `src/` folder when `uv` is not on PATH or there is no
+    `.venv` yet.
+    """
+    uv_path = shutil.which("uv")
+    venv_exists = os.path.isdir(os.path.join(directory, ".venv"))
+
+    env = None
+    if uv_path and venv_exists:
+        cmd = [uv_path, "run", "python", "-m", "platformops.servicedef"]
+        command_label = "uv run python -m platformops.servicedef"
+    else:
+        cmd = [sys.executable, "-m", "platformops.servicedef"]
+        command_label = (
+            "python3 -m platformops.servicedef  (fallback: uv or .venv not found, "
+            "using PYTHONPATH=src)"
+        )
+        env = dict(os.environ)
+        src_dir = os.path.join(directory, "src")
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = src_dir + (os.pathsep + existing if existing else "")
+
+    result = {
+        "attempted": True,
+        "command": command_label,
+        "ok": False,
+        "exit_code": None,
+        "timed_out": False,
+        "stdout": "",
+        "stderr_snippet": None,
+        "error": None,
+    }
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=INVENTORY_TIMEOUT_SECS,
+            env=env,
+        )
+        result["exit_code"] = proc.returncode
+        result["ok"] = proc.returncode == 0
+        result["stdout"] = proc.stdout or ""
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            result["stderr_snippet"] = stderr[:STDERR_SNIPPET_MAX_CHARS]
+    except subprocess.TimeoutExpired:
+        result["timed_out"] = True
+        result["error"] = (
+            f"The command took longer than {INVENTORY_TIMEOUT_SECS}s and was stopped."
+        )
+    except OSError as exc:
+        result["error"] = f"Could not run the command ({exc})."
+
+    return result
+
+
+def parse_servicedef_result_lines(stdout: str) -> dict | None:
+    """Best-effort, defensive parse of the demo's `OK -- ...` / `FAIL -- ...`
+    lines into two lists. Returns None if nothing recognizable was found.
+    This never raises: if the output format changes, the raw text is still
+    shown as-is by the caller regardless of what this function returns.
+    """
+    if not stdout or not stdout.strip():
+        return None
+    try:
+        ok_lines = re.findall(r"(?m)^\s*OK -- (.+)$", stdout)
+        fail_lines = re.findall(r"(?m)^\s*FAIL -- (.+)$", stdout)
+    except Exception:  # noqa: BLE001 - parsing is a bonus, never fatal
+        return None
+    if not ok_lines and not fail_lines:
+        return None
+    return {"ok_lines": ok_lines, "fail_lines": fail_lines}
+
+
+def read_servicedef(directory: str) -> dict:
+    """The M5 lens: real facts about the learner's
+    `src/platformops/servicedef.py` (source facts, always) plus a live run
+    of its demo (`python -m platformops.servicedef`) once the file exists.
+    """
+    source = read_servicedef_source(directory)
+    if not source["module_exists"]:
+        return {**source, "demo": None, "result_lines": None}
+
+    demo = run_servicedef_demo(directory)
+    result_lines = parse_servicedef_result_lines(demo["stdout"]) if demo["ok"] else None
+    return {**source, "demo": demo, "result_lines": result_lines}
+
+
 def build_ladder_state(tags_present: list[str]) -> dict:
     tag_set = set(tags_present)
     flat = flat_releases()
@@ -545,12 +728,14 @@ def build_state() -> dict:
     ladder = build_ladder_state(foundation["git"]["tags"])
     inventory = read_inventory(directory)
     module_map = read_module_map(directory)
+    servicedef = read_servicedef(directory)
     return {
         "platformops_dir": directory,
         "foundation": foundation,
         "ladder": ladder,
         "inventory": inventory,
         "module_map": module_map,
+        "servicedef": servicedef,
     }
 
 

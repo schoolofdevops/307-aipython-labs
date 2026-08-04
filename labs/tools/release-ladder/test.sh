@@ -289,5 +289,86 @@ check "$(json_get "$STATE4B" module_map.files.4.exists)" "False" "module_map.fil
 check "$(json_get "$STATE4B" module_map.files.5.exists)" "False" "module_map.files[5] (report.py) exists == False (not written yet)"
 
 echo
+echo "-- stage 5a: no servicedef.py yet -- empty state --"
+STATE5A=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE5A" servicedef.module_exists)" "False" "servicedef.module_exists == False before Module 5"
+check "$(json_get "$STATE5A" servicedef.field_count)" "" "servicedef.field_count is null before Module 5"
+check "$(json_get "$STATE5A" servicedef.demo)" "" "servicedef.demo is null before Module 5"
+check "$(json_get "$STATE5A" servicedef.result_lines)" "" "servicedef.result_lines is null before Module 5"
+
+echo
+echo "-- stage 5b: servicedef.py lands (M5), no pydantic, no uv/network needed --"
+cat > src/platformops/servicedef.py <<'EOF'
+"""Tiny fixture service definition model -- stands in for the learner's real
+v0.3 module so test.sh can exercise the Service Definitions lens without
+pydantic, uv or network access. This fixture is Phase A: plain annotated
+fields, no typed-choice or regex constraints yet (those land in Phase B).
+"""
+
+
+class ServiceDefinition:
+    """One service's operational identity (fixture)."""
+
+    name: str
+    repository: str
+    environment: str
+    team_owner: str
+
+
+def _print_result(label, ok, detail):
+    print(f"{label}:")
+    if ok:
+        print(f"  OK -- {detail}")
+    else:
+        print(f"  FAIL -- {detail}")
+
+
+if __name__ == "__main__":
+    _print_result("Good service definition", True, "fixture-svc (prod/fixture-ns)")
+    print()
+    _print_result(
+        "Bad service definition (missing deployment_name)",
+        False,
+        "deployment_name: Field required",
+    )
+EOF
+
+cat > tests/test_servicedef.py <<'EOF'
+def test_placeholder():
+    assert True
+EOF
+
+git add -A
+git commit -q -m "platformops v0.3 (fixture) -- service definitions land"
+
+STATE5B=$(curl -s "$BASE/api/state")
+check "$(json_get "$STATE5B" servicedef.module_exists)" "True" "servicedef.module_exists == True once servicedef.py exists"
+check "$(json_get "$STATE5B" servicedef.test_file_count)" "1" "servicedef.test_file_count == 1"
+check "$(json_get "$STATE5B" servicedef.field_count)" "4" "servicedef.field_count == 4"
+check "$(json_get "$STATE5B" servicedef.has_literal_constraint)" "False" "servicedef.has_literal_constraint == False (fixture is Phase A)"
+check "$(json_get "$STATE5B" servicedef.has_pattern_constraint)" "False" "servicedef.has_pattern_constraint == False (fixture is Phase A)"
+check "$(json_get "$STATE5B" servicedef.demo.ok)" "True" "servicedef.demo.ok == True (command ran fine)"
+check "$(json_get "$STATE5B" servicedef.result_lines.ok_lines.0)" "fixture-svc (prod/fixture-ns)" "servicedef.result_lines.ok_lines[0] parsed"
+check "$(json_get "$STATE5B" servicedef.result_lines.fail_lines.0)" "deployment_name: Field required" "servicedef.result_lines.fail_lines[0] parsed"
+
+SD_CMD="$(json_get "$STATE5B" servicedef.demo.command)"
+if printf '%s' "$SD_CMD" | grep -q "fallback"; then
+  echo "  OK    servicedef.demo.command used the documented uv-absent fallback"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  servicedef.demo.command did not use the fallback (got [$SD_CMD])"
+  FAIL=$((FAIL + 1))
+fi
+
+SD_STDOUT="$(json_get "$STATE5B" servicedef.demo.stdout)"
+if printf '%s' "$SD_STDOUT" | grep -q "OK -- fixture-svc" && printf '%s' "$SD_STDOUT" | grep -q "FAIL -- deployment_name"; then
+  echo "  OK    servicedef.demo.stdout contains the raw OK and FAIL lines"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  servicedef.demo.stdout missing expected OK/FAIL lines"
+  FAIL=$((FAIL + 1))
+fi
+
+echo
 echo "== $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

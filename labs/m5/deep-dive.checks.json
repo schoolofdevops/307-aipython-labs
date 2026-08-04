@@ -1,0 +1,15 @@
+{
+  "checks": [
+    { "id": "m5-dd-schema-validator-built-once-and-reused", "describe": "the compiled SchemaValidator on ServiceDefinition is the same object before and after a model_validate() call -- the schema is built once at class-definition time, not per call (section 2)",
+      "run": "uv run --directory labs/checkpoints/v0.3 python3 -c \"from platformops.servicedef import ServiceDefinition, GOOD_EXAMPLE; v1 = ServiceDefinition.__pydantic_validator__; ServiceDefinition.model_validate(GOOD_EXAMPLE); v2 = ServiceDefinition.__pydantic_validator__; print(v1 is v2); print(type(v1).__name__)\"",
+      "assert": { "contains": "True\nSchemaValidator" }, "weight": 2 },
+
+    { "id": "m5-dd-validation-error-carries-structured-keys", "describe": "a ValidationError.errors() entry carries the type/loc/msg/input keys as structured data, not a formatted string (section 3)",
+      "run": "uv run --directory labs/checkpoints/v0.3 python3 -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; bad = {**GOOD_EXAMPLE, 'environment': 'production'}; e = validate_service(bad)[0]; print(set(['type','loc','msg','input']) <= set(e.keys()))\"",
+      "assert": { "contains": "True" }, "weight": 2 },
+
+    { "id": "m5-dd-model-dump-round-trip-is-lossless", "describe": "model_dump() followed by model_validate() reproduces an equal model -- the round trip covered in section 5",
+      "run": "uv run --directory labs/checkpoints/v0.3 python3 -c \"from platformops.servicedef import validate_service, ServiceDefinition, GOOD_EXAMPLE; svc = validate_service(GOOD_EXAMPLE); rt = ServiceDefinition.model_validate(svc.model_dump()); print(rt == svc)\"",
+      "assert": { "contains": "True" }, "weight": 2 }
+  ]
+}

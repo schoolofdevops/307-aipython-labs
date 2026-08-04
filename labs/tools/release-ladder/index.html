@@ -123,6 +123,26 @@
     text-transform:uppercase;letter-spacing:.5px;padding:4px 8px;border-bottom:1px solid var(--line2)}
   #mmTree td{padding:4px 8px;font-family:var(--mono);border-bottom:1px solid var(--line2)}
   #mmTree tr.missing td{color:var(--faint);opacity:.6}
+
+  /* ---------- service definitions lens (M5) ---------- */
+  #servicedef dl{display:grid;grid-template-columns:16rem 1fr;gap:5px 10px;font-size:.86rem}
+  #servicedef dt{color:var(--faint)}
+  #servicedef dd{font-family:var(--mono)}
+  #sdEmpty{font-size:.9rem;color:var(--dim);line-height:1.5;padding:6px 2px}
+  #sdEmpty code{color:var(--txt)}
+  #sdResultChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .resultchip{font-family:var(--mono);font-size:.76rem;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel2);padding:5px 10px}
+  .resultchip.ok{border-color:var(--ok);color:var(--ok)}
+  .resultchip.fail{border-color:var(--bad);color:var(--bad)}
+  #sdErr{white-space:pre-wrap;color:var(--bad);font-family:var(--mono);font-size:.78rem;
+    margin-top:6px;line-height:1.4}
+  #sdRawWrap{margin-top:8px}
+  #sdRawWrap h2{font-size:.76rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--faint);margin-bottom:6px}
+  #sdRaw{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:var(--mono);font-size:.78rem;line-height:1.4;white-space:pre-wrap;
+    max-height:22rem;overflow:auto}
 </style>
 </head>
 <body>
@@ -137,7 +157,8 @@
     <button class="tab" data-view="foundation">Project Foundation (M2)</button>
     <button class="tab" data-view="inventory">Inventory Reporter (M3)</button>
     <button class="tab" data-view="modulemap">Module Map (M4)</button>
-    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M5+</button>
+    <button class="tab" data-view="servicedef">Service Definitions (M5)</button>
+    <button class="tab disabled" disabled title="Each later module adds one more lens here">More lenses land in M6+</button>
   </div>
 
   <div id="viewLadder" class="view active">
@@ -244,6 +265,54 @@
       </div>
     </div>
   </div>
+
+  <div id="viewServicedef" class="view">
+    <div class="panel" id="servicedef">
+      <h2>Your service definition model, right now</h2>
+      <dl>
+        <dt>servicedef.py file</dt><dd id="sdModuleExists">–</dd>
+        <dt>Test files for it</dt><dd id="sdTestCount">–</dd>
+      </dl>
+
+      <div id="sdEmpty" style="display:none">
+        You have not written <code>src/platformops/servicedef.py</code> yet —
+        finish Module 5 to light this up. Once the file exists, this tab will
+        show the real shape of your <code>ServiceDefinition</code> model and
+        actually run it.
+      </div>
+
+      <div id="sdRun" style="display:none">
+        <dl style="margin-top:8px">
+          <dt>ServiceDefinition fields</dt><dd id="sdFieldCount">–</dd>
+          <dt>Literal[ ] constraint present</dt><dd id="sdHasLiteral">–</dd>
+          <dt>pattern= constraint present</dt><dd id="sdHasPattern">–</dd>
+          <dt>Command run</dt><dd id="sdCommand">–</dd>
+          <dt>Result</dt><dd id="sdStatus">–</dd>
+        </dl>
+
+        <div id="sdResultChips"></div>
+        <div id="sdErr"></div>
+
+        <div id="sdRawWrap">
+          <h2>Raw demo output</h2>
+          <pre id="sdRaw"></pre>
+        </div>
+      </div>
+
+      <div id="note">
+        <b>What this shows:</b> the real shape of your
+        <code>ServiceDefinition</code> model — how many fields it declares,
+        and whether it already uses the <code>Literal[ ]</code> and
+        <code>pattern=</code> constraint markers Module 5 adds (a simple
+        signal of how far along the validation work is). It also runs your
+        own <code>python -m platformops.servicedef</code> demo (with the same
+        15-second time limit and <code>uv</code>-then-<code>python3</code>
+        fallback as the Inventory Reporter lens) and shows exactly what it
+        printed, with the <code>OK</code> / <code>FAIL</code> lines pulled out
+        as chips. Read-only either way — it never writes to your project.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -254,6 +323,7 @@
     foundation: document.getElementById('viewFoundation'),
     inventory: document.getElementById('viewInventory'),
     modulemap: document.getElementById('viewModuleMap'),
+    servicedef: document.getElementById('viewServicedef'),
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
@@ -451,6 +521,79 @@
     });
   }
 
+  function renderServicedef(data){
+    const sd = data.servicedef;
+    if (!sd) return;
+
+    document.getElementById('sdModuleExists').innerHTML = yesno(sd.module_exists);
+    document.getElementById('sdTestCount').textContent = String(sd.test_file_count);
+
+    const emptyEl = document.getElementById('sdEmpty');
+    const runEl = document.getElementById('sdRun');
+
+    if (!sd.module_exists){
+      emptyEl.style.display = 'block';
+      runEl.style.display = 'none';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    runEl.style.display = 'block';
+
+    document.getElementById('sdFieldCount').textContent =
+      (sd.field_count === null || sd.field_count === undefined) ? 'unknown' : String(sd.field_count);
+    document.getElementById('sdHasLiteral').innerHTML = yesno(sd.has_literal_constraint);
+    document.getElementById('sdHasPattern').innerHTML = yesno(sd.has_pattern_constraint);
+
+    const demo = sd.demo || {};
+    document.getElementById('sdCommand').textContent = demo.command || '(not run)';
+
+    let statusHtml;
+    if (demo.timed_out){
+      statusHtml = '<span class="no">timed out</span>';
+    } else if (demo.error && demo.exit_code === null){
+      statusHtml = '<span class="no">could not run</span>';
+    } else if (demo.ok){
+      statusHtml = '<span class="yes">ran fine (exit 0)</span>';
+    } else {
+      statusHtml = '<span class="no">failed (exit ' + demo.exit_code + ')</span>';
+    }
+    document.getElementById('sdStatus').innerHTML = statusHtml;
+
+    const errBox = document.getElementById('sdErr');
+    if (!demo.ok){
+      const parts = [];
+      if (demo.timed_out) parts.push(demo.error);
+      else if (demo.error) parts.push(demo.error);
+      if (demo.stderr_snippet) parts.push('What Python said (stderr):\n' + demo.stderr_snippet);
+      parts.push('Hint: run it yourself — "uv run python -m platformops.servicedef" inside ' +
+        '~/platformops — to see the full error and fix it there.');
+      errBox.textContent = parts.join('\n\n');
+    } else {
+      errBox.textContent = '';
+    }
+
+    const chips = document.getElementById('sdResultChips');
+    chips.innerHTML = '';
+    const rl = sd.result_lines;
+    if (rl){
+      (rl.ok_lines || []).forEach(line => {
+        const chip = document.createElement('span');
+        chip.className = 'resultchip ok';
+        chip.textContent = 'OK — ' + line;
+        chips.appendChild(chip);
+      });
+      (rl.fail_lines || []).forEach(line => {
+        const chip = document.createElement('span');
+        chip.className = 'resultchip fail';
+        chip.textContent = 'FAIL — ' + line;
+        chips.appendChild(chip);
+      });
+    }
+
+    document.getElementById('sdRaw').textContent =
+      (demo.stdout && demo.stdout.trim()) ? demo.stdout : '(no output captured)';
+  }
+
   async function loadState(){
     try{
       const res = await fetch('/api/state', {cache: 'no-store'});
@@ -466,6 +609,7 @@
       renderFoundation(data);
       renderInventory(data);
       renderModuleMap(data);
+      renderServicedef(data);
     }catch(e){
       setConn(false);
     }

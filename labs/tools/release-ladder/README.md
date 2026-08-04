@@ -25,7 +25,15 @@ per module — the live counterpart to the course simulators.
   `rules.py`, `summary.py`, `report.py`) exists, how many lines it has, and
   how many top-level functions it defines. Before you do that refactor, this
   tab honestly shows you that it is still one file.
-- **More lenses land in M5+:** the grey tab shows where future lenses will
+- **Service Definitions lens (M5):** whether you have written
+  `src/platformops/servicedef.py` yet, how many test files you have for it,
+  how many fields your `ServiceDefinition` model declares, and whether it
+  already uses the `Literal[ ]` and `pattern=` constraint markers Module 5
+  adds — a simple signal of how far the validation work has gotten. If the
+  file exists, this tab also runs your real `python -m platformops.servicedef`
+  demo and shows its output word-for-word, with the `OK` / `FAIL` lines
+  pulled out as chips.
+- **More lenses land in M6+:** the grey tab shows where future lenses will
   appear as you move through the course. Each later module adds one more tab
   to this same page — this tool never gets rebuilt from scratch.
 
@@ -75,21 +83,28 @@ small JSON snapshot of what it reads directly off your machine:
    `src/platformops/inventory/` exists as a package, it reads the text of
    each expected file (never imports or runs it) and reports its line count
    and how many top-level functions it defines.
+5. **Your service definition model (M5 only)** — once
+   `src/platformops/servicedef.py` exists, it reads the text of your
+   `ServiceDefinition` class (a defensive regex parse, never an import) to
+   count its fields and check for the `Literal[` and `pattern=` constraint
+   markers, then actually runs `python -m platformops.servicedef` and shows
+   the real output.
 
 Three lenses (Release Ladder, Project Foundation, Module Map) are pure
 read-only: **never runs** `ruff`, `pytest` or `uv` — only files, tags and
 Git status, so refreshing those tabs is always fast and never changes
-anything in your project. The Inventory Reporter lens (M3) is the one
-deliberate exception: it runs your own report so it can show it to you
-honestly. This is the whole point of a *live* tool: it shows you the truth
-about your own environment, not a simulation of it.
+anything in your project. The Inventory Reporter (M3) and Service
+Definitions (M5) lenses are the two deliberate exceptions: each runs your
+own module so it can show you the real output honestly. This is the whole
+point of a *live* tool: it shows you the truth about your own environment,
+not a simulation of it.
 
 If `uv` is not on your PATH yet, or you have not run `uv sync` so there is
-no `.venv`, the Inventory Reporter lens quietly falls back to plain
-`python3 -m platformops.inventory` with `PYTHONPATH` pointed at your
-project's `src/` folder — so the report still works even at that early
-stage. You do not need to do anything for this; the server figures it out
-each time it runs.
+no `.venv`, the Inventory Reporter and Service Definitions lenses quietly
+fall back to plain `python3 -m platformops.<module>` with `PYTHONPATH`
+pointed at your project's `src/` folder — so both still work even at that
+early stage. You do not need to do anything for this; the server figures it
+out each time it runs.
 
 ## Lenses so far
 
@@ -99,6 +114,7 @@ each time it runs.
 | Project Foundation | M2 | Real facts about your `~/platformops` project folder |
 | Inventory Reporter | M3 | Whether `inventory.py` exists, its test files, and your real inventory report run live |
 | Module Map | M4 | Your real `src/platformops/inventory/` package layout — which of the six expected files exist, their line counts, and their top-level function counts |
+| Service Definitions | M5 | Whether `servicedef.py` exists, its test files, your `ServiceDefinition` field count, whether the `Literal[`/`pattern=` constraint markers are present, and your real demo output run live |
 
 Every module from here can add one more tab to `index.html` — never a new
 tool, never a new file. If a future lens needs something your environment
@@ -129,6 +145,14 @@ tab and keep the rest of the page working, instead of showing a blank panel.
   Module 4 refactor yet (splitting `inventory.py` into
   `src/platformops/inventory/`). That is expected before Module 4; nothing
   is broken.
+- **Service Definitions tab says "finish Module 5 to light this up"** — you
+  have not written `src/platformops/servicedef.py` yet. That is expected
+  before Module 5; nothing is broken.
+- **Service Definitions tab shows "failed" with a stderr snippet** — your
+  `servicedef.py` raised an error when run directly. Run
+  `uv run python -m platformops.servicedef` yourself in `~/platformops` to
+  see the full error and fix it there; the tab will pick up the fix the next
+  time it polls.
 
 ## Testing this tool itself
 
@@ -139,7 +163,11 @@ fixture and checks that the Inventory Reporter lens goes from "not there
 yet" to a real, populated report — then replaces that single file with a
 `src/platformops/inventory/` package fixture and checks that the Module Map
 lens goes from the "still a single file" empty state to a populated file
-list with real line and def counts. It cleans up after itself.
+list with real line and def counts — then adds a tiny, pydantic-free
+`src/platformops/servicedef.py` fixture (using the same plain-`python3`
+fallback path, no `uv`/network needed) and checks that the Service
+Definitions lens goes from the "finish Module 5" empty state to a populated
+field count and real `OK`/`FAIL` chips. It cleans up after itself.
 
 ```bash
 bash labs/tools/release-ladder/test.sh

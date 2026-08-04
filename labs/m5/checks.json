@@ -1,0 +1,83 @@
+{
+  "checks": [
+    { "id": "m5-checkpoint-servicedef-file-present", "describe": "the ServiceDefinition module exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.3/src/platformops/servicedef.py",
+      "assert": { "exit": 0 }, "weight": 3 },
+
+    { "id": "m5-checkpoint-tests-file-present", "describe": "the servicedef test file exists in the checkpoint",
+      "run": "ls labs/checkpoints/v0.3/tests/test_servicedef.py",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m5-checkpoint-pydantic-in-pyproject", "describe": "pydantic is declared as a project dependency",
+      "run": "grep -c 'pydantic' labs/checkpoints/v0.3/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-only-pydantic-in-dependencies-block", "describe": "the dependencies array holds exactly one entry (pydantic) -- no dependency creep from Phase B",
+      "run": "sed -n '/dependencies = \\[/,/\\]/p' labs/checkpoints/v0.3/pyproject.toml | grep -c '\"'",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m5-checkpoint-pydantic-in-lockfile", "describe": "pydantic is resolved and pinned in uv.lock",
+      "run": "grep -c 'name = \"pydantic\"' labs/checkpoints/v0.3/uv.lock",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.3.0 release version",
+      "run": "grep -c 'version = \"0.3.0\"' labs/checkpoints/v0.3/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m5-checkpoint-readme-names-v0-3", "describe": "README.md names the v0.3 release",
+      "run": "grep -c 'v0.3' labs/checkpoints/v0.3/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m5-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
+      "run": "cd labs/checkpoints/v0.3 && uv run ruff check . 2>&1",
+      "assert": { "contains": "All checks passed!" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
+      "run": "cd labs/checkpoints/v0.3 && uv run ruff format --check . 2>&1",
+      "assert": { "exit": 0 }, "weight": 1 },
+
+    { "id": "m5-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- 15 tests: 8 carried from v0.2, 3 from Phase A, 4 from Phase B's constraints and to_summary",
+      "run": "cd labs/checkpoints/v0.3 && uv run pytest -q 2>&1",
+      "assert": { "contains": "15 passed" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-demo-prints-good-result", "describe": "the demo entry point prints an OK line for the good example",
+      "run": "cd labs/checkpoints/v0.3 && uv run python -m platformops.servicedef | grep -c 'OK -- checkout-api'",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-demo-prints-bad-result", "describe": "the demo entry point prints a FAIL line for the bad example",
+      "run": "cd labs/checkpoints/v0.3 && uv run python -m platformops.servicedef | grep -c 'FAIL --'",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-good-example-validates", "describe": "GOOD_EXAMPLE validates into a real ServiceDefinition instance",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE, ServiceDefinition; r = validate_service(GOOD_EXAMPLE); assert isinstance(r, ServiceDefinition); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-missing-field-rejected", "describe": "a service definition missing a required field fails validation with a structured 'missing' error",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; data = {k: v for k, v in GOOD_EXAMPLE.items() if k != 'deployment_name'}; errors = validate_service(data); assert isinstance(errors, list); assert any(e['loc'] == ('deployment_name',) and e['type'] == 'missing' for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-wrong-type-rejected", "describe": "a wrong-type value (int where str is declared) fails validation instead of being silently accepted",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; data = {**GOOD_EXAMPLE, 'aws_account': 111122223333}; errors = validate_service(data); assert isinstance(errors, list); assert any(e['loc'] == ('aws_account',) and e['type'] == 'string_type' for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-bad-environment-rejected", "describe": "Phase B constraint: an environment outside dev/staging/prod is rejected",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; bad = {**GOOD_EXAMPLE, 'environment': 'production'}; errors = validate_service(bad); assert isinstance(errors, list); assert any(e['loc'] == ('environment',) for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-bad-region-rejected", "describe": "Phase B constraint: a region outside the allowed list is rejected",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; bad = {**GOOD_EXAMPLE, 'region': 'ap-northeast-9'}; errors = validate_service(bad); assert isinstance(errors, list); assert any(e['loc'] == ('region',) for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-bad-namespace-rejected", "describe": "Phase B constraint: a kubernetes_namespace that is not lowercase-DNS-safe is rejected",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; bad = {**GOOD_EXAMPLE, 'kubernetes_namespace': 'Checkout_API'}; errors = validate_service(bad); assert isinstance(errors, list); assert any(e['loc'] == ('kubernetes_namespace',) for e in errors); print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 3 },
+
+    { "id": "m5-checkpoint-to-summary-method-works", "describe": "Phase B: to_summary() returns a one-line string carrying the service name and owner",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.servicedef import validate_service, GOOD_EXAMPLE; svc = validate_service(GOOD_EXAMPLE); s = svc.to_summary(); assert 'checkout-api' in s and 'payments-team' in s; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 2 },
+
+    { "id": "m5-checkpoint-inventory-package-untouched", "describe": "the v0.2 inventory package is still intact and its tests still pass -- this module's work is additive, not a rewrite of prior modules",
+      "run": "uv run --directory labs/checkpoints/v0.3 python -c \"from platformops.inventory import INVENTORY, find_missing_owner; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
+      "assert": { "contains": "OK" }, "weight": 2 }
+  ]
+}
