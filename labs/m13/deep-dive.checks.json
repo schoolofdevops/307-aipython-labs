@@ -1,0 +1,35 @@
+{
+  "checks": [
+    { "id": "m13-dd-checkpoint-tests-still-pass", "describe": "the real v1.1 checkpoint test suite still passes (regression check ahead of the scratch demos)",
+      "run": "bash -c \"cd labs/checkpoints/v1.1 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m13-dd-uv-tree-shows-real-dependency-graph", "describe": "uv tree (non-mutating) reports the checkpoint's real resolved dependency graph, including a known runtime dependency",
+      "run": "cd labs/checkpoints/v1.1 && uv tree",
+      "assert": { "contains": "typer" }, "weight": 2 },
+
+    { "id": "m13-dd-resolver-rejects-incompatible-constraints", "describe": "uv's resolver reports a conflict when asked for two packages whose version constraints cannot be satisfied together in one scratch project",
+      "run": "bash -c \"rm -rf /tmp/m13dd && mkdir -p /tmp/m13dd && cd /tmp/m13dd && uv init --no-readme conflict-demo >/dev/null 2>&1 && cd conflict-demo && uv add 'sphinx==7.0.0' 'jinja2==2.11.3' 2>&1; rm -rf /tmp/m13dd\"",
+      "assert": { "contains": "No solution found" }, "weight": 3 },
+
+    { "id": "m13-dd-ruff-catches-unused-variable-via-ast", "describe": "ruff's AST-based F841 rule catches an assigned-but-never-read variable that a plain text search cannot reliably distinguish from a similarly named, used variable",
+      "run": "bash -c \"mkdir -p /tmp/m13dd && cat <<'PYEOF' > /tmp/m13dd/unused_demo.py\ndef summarize(service_name):\n    servicename = service_name.strip()\n    return f\\\"service: {service_name}\\\"\nPYEOF\ncd labs/checkpoints/v1.1 && uv run ruff check /tmp/m13dd/unused_demo.py\"",
+      "assert": { "contains": "F841" }, "weight": 3 },
+
+    { "id": "m13-dd-ruff-rule-explains-f841", "describe": "ruff can explain a rule by code without re-running the check",
+      "run": "cd labs/checkpoints/v1.1 && uv run ruff rule F841",
+      "assert": { "contains": "F841" }, "weight": 1 },
+
+    { "id": "m13-dd-mypy-reveals-narrowed-types", "describe": "mypy's reveal_type() shows the union type narrowing to a specific member inside an isinstance branch",
+      "run": "bash -c \"mkdir -p /tmp/m13dd && cat <<'PYEOF' > /tmp/m13dd/narrowing_demo.py\nfrom pathlib import Path\n\nfrom platformops.config import load_service_yaml\nfrom platformops.servicedef import ServiceDefinition\n\n\ndef report(path: Path) -> str:\n    result = load_service_yaml(path)\n    reveal_type(result)\n\n    if isinstance(result, ServiceDefinition):\n        reveal_type(result)\n        return result.to_summary()\n\n    reveal_type(result)\n    return f\\\"{len(result)} error(s)\\\"\nPYEOF\ncd labs/checkpoints/v1.1 && uv run mypy /tmp/m13dd/narrowing_demo.py ; true\"",
+      "assert": { "contains": "Revealed type" }, "weight": 3 },
+
+    { "id": "m13-dd-lockfile-pins-with-hashes", "describe": "uv.lock records package versions with cryptographic hashes, not just bare version numbers",
+      "run": "grep -c 'hash = \"sha256' labs/checkpoints/v1.1/uv.lock",
+      "assert": { "matches": "^[1-9][0-9]*$" }, "weight": 2 },
+
+    { "id": "m13-dd-uv-sync-locked-agrees-with-pyproject", "describe": "uv sync --locked succeeds against the final checkpoint, proving pyproject.toml and uv.lock have not drifted apart",
+      "run": "cd labs/checkpoints/v1.1 && uv sync --locked",
+      "assert": { "exit": 0 }, "weight": 2 }
+  ]
+}

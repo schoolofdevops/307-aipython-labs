@@ -1,0 +1,107 @@
+{
+  "checks": [
+    { "id": "m13-checkpoint-version-1-1", "describe": "pyproject.toml carries the v1.1.0 release version",
+      "run": "grep -c 'version = \"1.1.0\"' labs/checkpoints/v1.1/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-readme-names-v1-1", "describe": "README.md names the v1.1 release",
+      "run": "grep -c 'v1.1' labs/checkpoints/v1.1/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-changelog-exists-with-twelve-releases", "describe": "CHANGELOG.md exists and lists all twelve releases from v0.0.0 through v1.1.0",
+      "run": "grep -c '^## \\[' labs/checkpoints/v1.1/CHANGELOG.md",
+      "assert": { "matches": "^1[0-9]$" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-changelog-names-current-release", "describe": "CHANGELOG.md's newest entry names the 1.1.0 release",
+      "run": "grep -c '\\[1.1.0\\]' labs/checkpoints/v1.1/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-py-typed-marker-present", "describe": "the py.typed PEP 561 marker exists in the package directory",
+      "run": "bash -c \"test -f labs/checkpoints/v1.1/src/platformops/py.typed && echo present || echo missing\"",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-config-imports-any", "describe": "config.py imports typing.Any",
+      "run": "grep -c 'from typing import Any' labs/checkpoints/v1.1/src/platformops/config.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-config-uses-dict-str-any", "describe": "config.py's bare dict return types were tightened to dict[str, Any]",
+      "run": "grep -c 'dict\\[str, Any\\]' labs/checkpoints/v1.1/src/platformops/config.py",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m13-checkpoint-mypy-dev-dependency", "describe": "mypy is now a dev dependency",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v1.1/pyproject.toml','rb')); deps=' '.join(d['dependency-groups']['dev']); print('present' if 'mypy' in deps else 'missing')\"",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-mypy-section-configured", "describe": "pyproject.toml has a [tool.mypy] section with disallow_untyped_defs enabled",
+      "run": "grep -c 'disallow_untyped_defs = true' labs/checkpoints/v1.1/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-mypy-scope-widened-to-src", "describe": "mypy's files setting was widened from config.py-only to the whole src tree (Phase 2)",
+      "run": "grep -c 'files = \\[\"src\"\\]' labs/checkpoints/v1.1/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-yaml-override-present", "describe": "a mypy override tells the checker to trust the untyped yaml import",
+      "run": "bash -c \"grep -A1 'module = \\\"yaml\\\"' labs/checkpoints/v1.1/pyproject.toml | grep -c ignore_missing_imports\"",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-mypy-passes-whole-src", "describe": "mypy runs clean across the whole src tree -- proof type annotations were extended project-wide, not just in config.py",
+      "run": "cd labs/checkpoints/v1.1 && uv run mypy",
+      "assert": { "exit": 0 }, "weight": 4 },
+
+    { "id": "m13-checkpoint-ruff-check", "describe": "ruff check passes",
+      "run": "cd labs/checkpoints/v1.1 && uv run ruff check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m13-checkpoint-ruff-format", "describe": "ruff format is clean",
+      "run": "cd labs/checkpoints/v1.1 && uv run ruff format --check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m13-checkpoint-pytest", "describe": "pytest passes",
+      "run": "cd labs/checkpoints/v1.1 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "matches": "passed" }, "weight": 3 },
+
+    { "id": "m13-checkpoint-check-secrets-script-exists-and-executable", "describe": "scripts/check-secrets.sh exists and is executable",
+      "run": "bash -c \"test -x labs/checkpoints/v1.1/scripts/check-secrets.sh && echo executable || echo not-executable\"",
+      "assert": { "contains": "executable" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-check-secrets-clean-on-real-project", "describe": "the secret scanner reports clean when run against the real project (no leaked credentials)",
+      "run": "cd labs/checkpoints/v1.1 && ./scripts/check-secrets.sh",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m13-checkpoint-check-secrets-flags-a-planted-secret", "describe": "the secret scanner correctly flags a planted AWS-shaped key in a scratch fixture",
+      "run": "bash -c \"rm -rf /tmp/m13-check-secret && mkdir -p /tmp/m13-check-secret && printf 'AWS_KEY = AKIAABCDEFGHIJKLMNOP\\n' > /tmp/m13-check-secret/leaky.py; labs/checkpoints/v1.1/scripts/check-secrets.sh /tmp/m13-check-secret 2>&1; rm -rf /tmp/m13-check-secret\"",
+      "assert": { "contains": "check-secrets: FAIL" }, "weight": 3 },
+
+    { "id": "m13-checkpoint-check-gates-script-exists-and-executable", "describe": "scripts/check-gates.sh exists, is executable, and runs every gate in order",
+      "run": "bash -c \"test -x labs/checkpoints/v1.1/scripts/check-gates.sh && echo executable || echo not-executable\"",
+      "assert": { "contains": "executable" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-check-gates-includes-every-stage", "describe": "check-gates.sh references all five original gates plus the dependency audit",
+      "run": "bash -c \"grep -c -E 'ruff format|ruff check|mypy|pytest|secret scan|dependency audit' labs/checkpoints/v1.1/scripts/check-gates.sh\"",
+      "assert": { "matches": "^([6-9]|[1-9][0-9]+)$" }, "weight": 3 },
+
+    { "id": "m13-checkpoint-check-deps-script-exists-and-executable", "describe": "scripts/check-deps.sh exists and is executable",
+      "run": "bash -c \"test -x labs/checkpoints/v1.1/scripts/check-deps.sh && echo executable || echo not-executable\"",
+      "assert": { "contains": "executable" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-check-deps-uses-uvx-pip-audit", "describe": "the dependency check runs pip-audit through uvx, not as a permanent project dependency",
+      "run": "grep -c 'uvx pip-audit' labs/checkpoints/v1.1/scripts/check-deps.sh",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-pip-audit-not-a-permanent-dependency", "describe": "pip-audit was not added as a permanent dev dependency in pyproject.toml",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v1.1/pyproject.toml','rb')); deps=' '.join(d['dependency-groups']['dev']); print('absent' if 'pip-audit' not in deps else 'present')\"",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-no-shell-true-regression", "describe": "shell=True still never appears in src/ (unchanged from earlier modules)",
+      "run": "bash -c \"grep -rn --include='*.py' 'shell=True' labs/checkpoints/v1.1/src/ | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m13-checkpoint-help-unchanged", "describe": "--help still lists every command (no CLI surface change this module)",
+      "run": "cd labs/checkpoints/v1.1 && uv run platformops --help",
+      "assert": { "contains": "check-security" }, "weight": 1 },
+
+    { "id": "m13-checkpoint-version-command-reports-1-1-0", "describe": "platformops version reports 1.1.0",
+      "run": "cd labs/checkpoints/v1.1 && uv run platformops version",
+      "assert": { "contains": "1.1.0" }, "weight": 1 }
+  ]
+}
