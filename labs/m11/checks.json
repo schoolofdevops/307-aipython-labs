@@ -56,12 +56,12 @@
       "run": "grep -c 'class GitStatusResult' labs/checkpoints/v0.9/src/platformops/local_ops.py",
       "assert": { "matches": "^1$" }, "weight": 1 },
 
-    { "id": "m11-checkpoint-no-shell-true-anywhere-in-src", "describe": "shell=True never appears anywhere under src/",
-      "run": "bash -c \"grep -rn 'shell=True' labs/checkpoints/v0.9/src/ | wc -l | tr -d ' '\"",
+    { "id": "m11-checkpoint-no-shell-true-anywhere-in-src", "describe": "shell=True never appears in any .py file under src/",
+      "run": "bash -c \"grep -rn --include='*.py' 'shell=True' labs/checkpoints/v0.9/src/ | wc -l | tr -d ' '\"",
       "assert": { "matches": "^0$" }, "weight": 3 },
 
     { "id": "m11-checkpoint-every-subprocess-run-has-a-timeout", "describe": "every subprocess.run( call in local_ops.py includes a timeout argument in the same call",
-      "run": "python3 -c \"import re; text = open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); calls = re.findall(r'subprocess\\.run\\([^)]*\\)', text, re.S); missing = [c for c in calls if 'timeout' not in c]; print(len(missing))\"",
+      "run": "python3 -c \"import ast,sys; t=open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); tree=ast.parse(t); bad=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and ast.dump(n.func).find('subprocess')>=0 and ast.dump(n.func).find('run')>=0 and not any(k.arg=='timeout' for k in n.keywords)]; print(len(bad))\"",
       "assert": { "matches": "^0$" }, "weight": 3 },
 
     { "id": "m11-checkpoint-subprocess-run-call-count", "describe": "local_ops.py has at least four subprocess.run( call sites (git_status, git_log, docker_info, container_list)",

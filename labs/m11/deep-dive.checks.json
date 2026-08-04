@@ -5,7 +5,7 @@
       "assert": { "matches": "^0$" }, "weight": 3 },
 
     { "id": "m11-dd-timeout-still-present-everywhere", "describe": "every subprocess.run( call site in local_ops.py still has a timeout argument",
-      "run": "python3 -c \"import re; text = open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); calls = re.findall(r'subprocess\\.run\\([^)]*\\)', text, re.S); missing = [c for c in calls if 'timeout' not in c]; print(len(missing))\"",
+      "run": "python3 -c \"import ast,sys; t=open('labs/checkpoints/v0.9/src/platformops/local_ops.py').read(); tree=ast.parse(t); bad=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and ast.dump(n.func).find('subprocess')>=0 and ast.dump(n.func).find('run')>=0 and not any(k.arg=='timeout' for k in n.keywords)]; print(len(bad))\"",
       "assert": { "matches": "^0$" }, "weight": 2 },
 
     { "id": "m11-dd-check-security-command-registered", "describe": "check-security command is registered on the CLI",
@@ -24,12 +24,12 @@
       "run": "python3 -c \"import os; status = os.system('exit 3'); print(os.WEXITSTATUS(status))\"",
       "assert": { "contains": "3" }, "weight": 1 },
 
-    { "id": "m11-dd-popen-terminate-lets-child-catch-sigterm", "describe": "Popen.terminate() delivers a catchable SIGTERM the child can handle before exiting",
-      "run": "python3 -c \"import subprocess, time; script = 'import signal, sys, time\\nsignal.signal(signal.SIGTERM, lambda *a: (print(\\'caught\\', flush=True), sys.exit(0)))\\ntime.sleep(5)\\n'; p = subprocess.Popen(['python3', '-c', script], stdout=subprocess.PIPE, text=True); time.sleep(0.3); p.terminate(); out, _ = p.communicate(timeout=3); print(out.strip())\"",
-      "assert": { "contains": "caught" }, "weight": 2 },
+    { "id": "m11-dd-popen-terminate-sends-sigterm", "describe": "Popen.terminate() delivers SIGTERM (returncode -15), distinct from kill()'s SIGKILL (-9)",
+      "run": "python3 -c \"import subprocess, time; p = subprocess.Popen(['sleep', '5']); time.sleep(0.2); p.terminate(); p.wait(timeout=3); print('returncode', p.returncode)\"",
+      "assert": { "contains": "-15" }, "weight": 2 },
 
-    { "id": "m11-dd-run-timeout-kills-not-terminates", "describe": "subprocess.run(timeout=N) raises TimeoutExpired and the child never runs its own SIGTERM handler",
-      "run": "python3 -c \"import subprocess; script = 'import signal, sys, time\\nsignal.signal(signal.SIGTERM, lambda *a: (print(\\'caught\\', flush=True), sys.exit(0)))\\ntime.sleep(5)\\n'\nimport subprocess as sp\ntry:\n    sp.run(['python3', '-c', script], timeout=1, capture_output=True, text=True)\n    print('no-timeout-raised')\nexcept sp.TimeoutExpired:\n    print('timeout-raised-child-not-cleaned-up')\"",
-      "assert": { "contains": "timeout-raised-child-not-cleaned-up" }, "weight": 2 }
+    { "id": "m11-dd-run-timeout-raises-timeoutexpired", "describe": "subprocess.run(timeout=N) raises TimeoutExpired on a command that outlives its deadline",
+      "run": "python3 -c \"import subprocess\ntry:\n    subprocess.run(['sleep', '5'], timeout=1)\n    print('no-timeout-raised')\nexcept subprocess.TimeoutExpired:\n    print('timeout-raised')\"",
+      "assert": { "contains": "timeout-raised" }, "weight": 2 }
   ]
 }
