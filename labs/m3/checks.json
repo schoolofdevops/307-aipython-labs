@@ -1,59 +1,59 @@
 {
   "checks": [
     { "id": "m3-checkpoint-files-present", "describe": "the platformops v0.1 checkpoint has inventory.py and its test file",
-      "run": "ls labs/platformops/src/platformops/inventory.py labs/platformops/tests/test_inventory.py",
+      "run": "ls labs/checkpoints/v0.1/src/platformops/inventory.py labs/checkpoints/v0.1/tests/test_inventory.py",
       "assert": { "exit": 0 }, "weight": 2 },
 
     { "id": "m3-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.1.0 release version",
-      "run": "grep -c 'version = \"0.1.0\"' labs/platformops/pyproject.toml",
+      "run": "grep -c 'version = \"0.1.0\"' labs/checkpoints/v0.1/pyproject.toml",
       "assert": { "matches": "^1$" }, "weight": 1 },
 
     { "id": "m3-checkpoint-readme-names-v0-1", "describe": "README.md names the v0.1 release",
-      "run": "grep -c 'v0.1' labs/platformops/README.md",
+      "run": "grep -c 'v0.1' labs/checkpoints/v0.1/README.md",
       "assert": { "matches": "^[1-9]" }, "weight": 1 },
 
     { "id": "m3-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
-      "run": "cd labs/platformops && uv run ruff check . 2>&1",
+      "run": "cd labs/checkpoints/v0.1 && uv run ruff check . 2>&1",
       "assert": { "contains": "All checks passed!" }, "weight": 3 },
 
     { "id": "m3-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
-      "run": "cd labs/platformops && uv run ruff format --check . 2>&1",
+      "run": "cd labs/checkpoints/v0.1 && uv run ruff format --check . 2>&1",
       "assert": { "exit": 0 }, "weight": 1 },
 
     { "id": "m3-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint, including the new inventory tests",
-      "run": "cd labs/platformops && uv run pytest -q 2>&1",
+      "run": "cd labs/checkpoints/v0.1 && uv run pytest -q 2>&1",
       "assert": { "contains": "8 passed" }, "weight": 3 },
 
     { "id": "m3-checkpoint-report-has-missing-owner-section", "describe": "the report prints the missing-owner-tag section",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c 'Missing owner tag:'",
+      "run": "cd labs/checkpoints/v0.1 && uv run python -m platformops.inventory | grep -c 'Missing owner tag:'",
       "assert": { "matches": "^1$" }, "weight": 1 },
 
     { "id": "m3-checkpoint-report-has-low-memory-section", "describe": "the report prints the low-memory-in-prod section",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c 'Prod servers with low memory'",
+      "run": "cd labs/checkpoints/v0.1 && uv run python -m platformops.inventory | grep -c 'Prod servers with low memory'",
       "assert": { "matches": "^1$" }, "weight": 1 },
 
     { "id": "m3-checkpoint-report-has-summary-section", "describe": "the Phase B extension's summary section is present in the report",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c '^Summary:$'",
+      "run": "cd labs/checkpoints/v0.1 && uv run python -m platformops.inventory | grep -c '^Summary:$'",
       "assert": { "matches": "^1$" }, "weight": 2 },
 
     { "id": "m3-checkpoint-report-has-sorted-section", "describe": "the Phase B extension's sorted-by-name section is present in the report",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c 'sorted by name'",
+      "run": "cd labs/checkpoints/v0.1 && uv run python -m platformops.inventory | grep -c 'sorted by name'",
       "assert": { "matches": "^1$" }, "weight": 2 },
 
     { "id": "m3-checkpoint-find-missing-owner-behaves", "describe": "find_missing_owner flags exactly the two servers with no owner tag",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import find_missing_owner, INVENTORY; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python -c \"from platformops.inventory import find_missing_owner, INVENTORY; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m3-checkpoint-find-low-memory-prod-behaves", "describe": "find_low_memory_prod flags exactly the two under-provisioned prod servers",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import find_low_memory_prod, INVENTORY; assert sorted(find_low_memory_prod(INVENTORY)) == ['api-02', 'web-02']; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python -c \"from platformops.inventory import find_low_memory_prod, INVENTORY; assert sorted(find_low_memory_prod(INVENTORY)) == ['api-02', 'web-02']; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m3-checkpoint-count-by-environment-behaves", "describe": "count_by_environment matches the real 6/2/2 split of the inventory",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import count_by_environment, INVENTORY; assert count_by_environment(INVENTORY) == {'prod': 6, 'staging': 2, 'dev': 2}; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python -c \"from platformops.inventory import count_by_environment, INVENTORY; assert count_by_environment(INVENTORY) == {'prod': 6, 'staging': 2, 'dev': 2}; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m3-checkpoint-extension-functions-behave", "describe": "the reference Phase B extension (filter/sort/summary) behaves correctly and sort_by_name does not mutate the original list",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import build_summary, sort_by_name, filter_by_environment, INVENTORY; s = build_summary(INVENTORY); assert s['total_servers'] == 10 and s['total_cpu'] == 56 and s['total_memory_gb'] == 158; before = [x['name'] for x in INVENTORY]; sorted_servers = sort_by_name(INVENTORY); assert [x['name'] for x in sorted_servers] == sorted(before); assert [x['name'] for x in INVENTORY] == before; assert len(filter_by_environment(INVENTORY, 'prod')) == 6; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python -c \"from platformops.inventory import build_summary, sort_by_name, filter_by_environment, INVENTORY; s = build_summary(INVENTORY); assert s['total_servers'] == 10 and s['total_cpu'] == 56 and s['total_memory_gb'] == 158; before = [x['name'] for x in INVENTORY]; sorted_servers = sort_by_name(INVENTORY); assert [x['name'] for x in sorted_servers] == sorted(before); assert [x['name'] for x in INVENTORY] == before; assert len(filter_by_environment(INVENTORY, 'prod')) == 6; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 }
   ]
 }

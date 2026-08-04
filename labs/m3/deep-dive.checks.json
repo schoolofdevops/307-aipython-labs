@@ -1,15 +1,15 @@
 {
   "checks": [
     { "id": "m3-dd-aliasing-shares-the-same-list", "describe": "two names pointing at the same list see each other's in-place changes (id/is evidence, section 1)",
-      "run": "uv run --directory labs/platformops python3 -c \"inventory = [{'name': 'web-01'}]; backup = inventory; backup.append({'name': 'web-02'}); print(len(inventory)); print(inventory is backup)\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python3 -c \"inventory = [{'name': 'web-01'}]; backup = inventory; backup.append({'name': 'web-02'}); print(len(inventory)); print(inventory is backup)\"",
       "assert": { "contains": "True" }, "weight": 2 },
 
     { "id": "m3-dd-shallow-copy-shares-nested-object", "describe": "a shallow copy still shares a nested mutable dict with the original (section 2)",
-      "run": "uv run --directory labs/platformops python3 -c \"import copy; original = [{'tags': {'owner': 'a'}}]; shallow = copy.copy(original); shallow[0]['tags']['owner'] = 'b'; print(original[0]['tags']['owner'])\"",
+      "run": "uv run --directory labs/checkpoints/v0.1 python3 -c \"import copy; original = [{'tags': {'owner': 'a'}}]; shallow = copy.copy(original); shallow[0]['tags']['owner'] = 'b'; print(original[0]['tags']['owner'])\"",
       "assert": { "contains": "b" }, "weight": 2 },
 
     { "id": "m3-dd-tuple-blocks-slot-reassignment-only", "describe": "a tuple allows mutating a mutable object in one of its slots, but raises TypeError when reassigning the slot itself (section 4)",
-      "run": "uv run --directory labs/platformops python3 -c \"t = ('a', ['x']); t[1].append('y'); print(t); t[0] = 'z'\" 2>&1",
+      "run": "uv run --directory labs/checkpoints/v0.1 python3 -c \"t = ('a', ['x']); t[1].append('y'); print(t); t[0] = 'z'\" 2>&1",
       "assert": { "contains": "TypeError" }, "weight": 2 }
   ]
 }

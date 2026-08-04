@@ -1,79 +1,79 @@
 {
   "checks": [
     { "id": "m4-checkpoint-package-files-present", "describe": "the inventory module is now a package with the six expected files",
-      "run": "ls labs/platformops/src/platformops/inventory/__init__.py labs/platformops/src/platformops/inventory/__main__.py labs/platformops/src/platformops/inventory/data.py labs/platformops/src/platformops/inventory/rules.py labs/platformops/src/platformops/inventory/summary.py labs/platformops/src/platformops/inventory/report.py",
+      "run": "ls labs/checkpoints/v0.2/src/platformops/inventory/__init__.py labs/checkpoints/v0.2/src/platformops/inventory/__main__.py labs/checkpoints/v0.2/src/platformops/inventory/data.py labs/checkpoints/v0.2/src/platformops/inventory/rules.py labs/checkpoints/v0.2/src/platformops/inventory/summary.py labs/checkpoints/v0.2/src/platformops/inventory/report.py",
       "assert": { "exit": 0 }, "weight": 3 },
 
     { "id": "m4-checkpoint-old-single-file-removed", "describe": "the old single-file inventory.py module no longer exists (replaced by the package)",
-      "run": "test -f labs/platformops/src/platformops/inventory.py && echo PRESENT || echo ABSENT",
+      "run": "test -f labs/checkpoints/v0.2/src/platformops/inventory.py && echo PRESENT || echo ABSENT",
       "assert": { "contains": "ABSENT" }, "weight": 2 },
 
     { "id": "m4-checkpoint-version-bumped", "describe": "pyproject.toml carries the v0.2.0 release version",
-      "run": "grep -c 'version = \"0.2.0\"' labs/platformops/pyproject.toml",
+      "run": "grep -c 'version = \"0.2.0\"' labs/checkpoints/v0.2/pyproject.toml",
       "assert": { "matches": "^1$" }, "weight": 1 },
 
     { "id": "m4-checkpoint-readme-names-v0-2", "describe": "README.md names the v0.2 release",
-      "run": "grep -c 'v0.2' labs/platformops/README.md",
+      "run": "grep -c 'v0.2' labs/checkpoints/v0.2/README.md",
       "assert": { "matches": "^[1-9]" }, "weight": 1 },
 
     { "id": "m4-checkpoint-ruff-check-passes", "describe": "ruff check passes inside the checkpoint",
-      "run": "cd labs/platformops && uv run ruff check . 2>&1",
+      "run": "cd labs/checkpoints/v0.2 && uv run ruff check . 2>&1",
       "assert": { "contains": "All checks passed!" }, "weight": 3 },
 
     { "id": "m4-checkpoint-ruff-format-clean", "describe": "ruff format has nothing left to rewrite in the checkpoint",
-      "run": "cd labs/platformops && uv run ruff format --check . 2>&1",
+      "run": "cd labs/checkpoints/v0.2 && uv run ruff format --check . 2>&1",
       "assert": { "exit": 0 }, "weight": 1 },
 
     { "id": "m4-checkpoint-pytest-passes", "describe": "pytest passes inside the checkpoint -- same 8 tests as v0.1, unchanged, proving behavior did not change",
-      "run": "cd labs/platformops && uv run pytest -q 2>&1",
+      "run": "cd labs/checkpoints/v0.2 && uv run pytest -q 2>&1",
       "assert": { "contains": "8 passed" }, "weight": 3 },
 
     { "id": "m4-checkpoint-test-file-byte-identical-to-v0-1", "describe": "tests/test_inventory.py needed zero edits -- the same imports from platformops.inventory still resolve through the new package's __init__.py",
-      "run": "grep -c 'from platformops.inventory import' labs/platformops/tests/test_inventory.py",
+      "run": "grep -c 'from platformops.inventory import' labs/checkpoints/v0.2/tests/test_inventory.py",
       "assert": { "matches": "^1$" }, "weight": 2 },
 
     { "id": "m4-checkpoint-init-re-exports-public-surface", "describe": "__init__.py re-exports every public name so platformops.inventory.<name> importing still works unchanged",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import INVENTORY, MIN_PROD_MEMORY_GB, find_missing_owner, find_low_memory_prod, count_by_environment, filter_by_environment, sort_by_name, build_summary, print_report; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops.inventory import INVENTORY, MIN_PROD_MEMORY_GB, find_missing_owner, find_low_memory_prod, count_by_environment, filter_by_environment, sort_by_name, build_summary, print_report; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m4-checkpoint-module-as-package-still-runs", "describe": "uv run python -m platformops.inventory still works now that inventory is a package (the __main__.py move)",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c 'PlatformOps Inventory Report'",
+      "run": "cd labs/checkpoints/v0.2 && uv run python -m platformops.inventory | grep -c 'PlatformOps Inventory Report'",
       "assert": { "matches": "^1$" }, "weight": 3 },
 
     { "id": "m4-checkpoint-report-output-unchanged-from-v0-1", "describe": "the printed report carries the same section headers as v0.1's extended report -- proof the refactor changed nothing observable",
-      "run": "cd labs/platformops && uv run python -m platformops.inventory | grep -c -E '^(Summary:|Prod servers \\(filtered\\):|All servers, sorted by name:)$'",
+      "run": "cd labs/checkpoints/v0.2 && uv run python -m platformops.inventory | grep -c -E '^(Summary:|Prod servers \\(filtered\\):|All servers, sorted by name:)$'",
       "assert": { "matches": "^3$" }, "weight": 3 },
 
     { "id": "m4-checkpoint-no-new-classes", "describe": "Phase B deduplication added a helper function, not a class -- this audience over-classes, so the review checklist bans new classes",
-      "run": "grep -rn '^class ' labs/platformops/src/platformops/inventory/ | wc -l | tr -d ' '",
+      "run": "grep -rn '^class ' labs/checkpoints/v0.2/src/platformops/inventory/ | wc -l | tr -d ' '",
       "assert": { "matches": "^0$" }, "weight": 3 },
 
     { "id": "m4-checkpoint-dedup-helper-exists", "describe": "the shared environment-filter helper exists in rules.py and summary.py's filter_by_environment now calls it instead of repeating the loop",
-      "run": "grep -c '_servers_in_environment' labs/platformops/src/platformops/inventory/rules.py labs/platformops/src/platformops/inventory/summary.py | paste -sd, -",
+      "run": "grep -c '_servers_in_environment' labs/checkpoints/v0.2/src/platformops/inventory/rules.py labs/checkpoints/v0.2/src/platformops/inventory/summary.py | paste -sd, -",
       "assert": { "contains": ":2" }, "weight": 3 },
 
     { "id": "m4-checkpoint-no-dependency-cycle-summary-to-rules-only", "describe": "summary.py imports from rules.py, but rules.py does not import from summary.py -- the cycle-safe direction",
-      "run": "grep -c '^from \\.summary' labs/platformops/src/platformops/inventory/rules.py || true",
+      "run": "grep -c '^from \\.summary' labs/checkpoints/v0.2/src/platformops/inventory/rules.py || true",
       "assert": { "matches": "^0$" }, "weight": 2 },
 
     { "id": "m4-checkpoint-find-missing-owner-still-behaves", "describe": "find_missing_owner still flags exactly the same two servers after the refactor",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import find_missing_owner, INVENTORY; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops.inventory import find_missing_owner, INVENTORY; assert sorted(find_missing_owner(INVENTORY)) == ['web-02', 'worker-01']; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m4-checkpoint-find-low-memory-prod-still-behaves", "describe": "find_low_memory_prod still flags exactly the same two servers after the dedup refactor routed it through the shared helper",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import find_low_memory_prod, INVENTORY; assert sorted(find_low_memory_prod(INVENTORY)) == ['api-02', 'web-02']; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops.inventory import find_low_memory_prod, INVENTORY; assert sorted(find_low_memory_prod(INVENTORY)) == ['api-02', 'web-02']; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 3 },
 
     { "id": "m4-checkpoint-filter-by-environment-still-behaves", "describe": "filter_by_environment still returns exactly the 6 prod servers after routing through the shared helper",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import filter_by_environment, INVENTORY; assert len(filter_by_environment(INVENTORY, 'prod')) == 6; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops.inventory import filter_by_environment, INVENTORY; assert len(filter_by_environment(INVENTORY, 'prod')) == 6; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 2 },
 
     { "id": "m4-checkpoint-build-summary-still-behaves", "describe": "build_summary still reports the same totals after the refactor",
-      "run": "uv run --directory labs/platformops python -c \"from platformops.inventory import build_summary, INVENTORY; s = build_summary(INVENTORY); assert s['total_servers'] == 10 and s['total_cpu'] == 56 and s['total_memory_gb'] == 158; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops.inventory import build_summary, INVENTORY; s = build_summary(INVENTORY); assert s['total_servers'] == 10 and s['total_cpu'] == 56 and s['total_memory_gb'] == 158; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 2 },
 
     { "id": "m4-checkpoint-toolkit-version-untouched", "describe": "src/platformops/__init__.py's __version__ stays at 0.0.0 -- this module's work is the inventory refactor, not the toolkit version wiring",
-      "run": "uv run --directory labs/platformops python -c \"from platformops import __version__; assert __version__ == '0.0.0'; print('OK')\"",
+      "run": "uv run --directory labs/checkpoints/v0.2 python -c \"from platformops import __version__; assert __version__ == '0.0.0'; print('OK')\"",
       "assert": { "contains": "OK" }, "weight": 1 }
   ]
 }

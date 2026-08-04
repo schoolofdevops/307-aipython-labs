@@ -9,6 +9,8 @@ This folder holds:
 - `deep-dive.checks.json` — machine-readable checks for the Deep Dive page (used by course tooling).
 
 If your own `~/platformops` project stops passing its quality gates and you cannot find why,
-compare it file by file against `labs/platformops/` in this same repository — that folder is
-the instructor's own working copy of the exact v0.0 end state. Do not delete your project and
-start over; a targeted comparison almost always finds the difference.
+compare it file by file against `labs/checkpoints/v0.0/` in this same repository — that folder
+is the instructor's own working copy of the exact v0.0 end state, frozen. (`labs/platformops`
+is not the right place to compare against for this: it always holds the *latest* release, so it
+moves on once a later module ships.) Do not delete your project and start over; a targeted
+comparison almost always finds the difference.
