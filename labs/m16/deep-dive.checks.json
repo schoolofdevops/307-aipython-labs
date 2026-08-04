@@ -1,0 +1,75 @@
+{
+  "checks": [
+    { "id": "m16-dd-file-exists", "describe": "deep-dive.md exists for M16",
+      "run": "test -f site/docs/m16-agent-skills-mental-model/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m16-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m16-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m16-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m16-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m16-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "bash -c \"grep -c '\\*\\*Use it when:\\*\\*' site/docs/m16-agent-skills-mental-model/deep-dive.md\"",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m16-dd-no-unfilled-placeholders", "describe": "all expected output blocks have been folded with real captured output",
+      "run": "bash -c \"grep -c '_expected output — folded in during live lab validation_' site/docs/m16-agent-skills-mental-model/deep-dive.md || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m16-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m16-dd-covers-word-count-measurement", "describe": "deep dive measures frontmatter vs full-body word count as the progressive-disclosure mechanism",
+      "run": "grep -c 'wc -w' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m16-dd-covers-trigger-phrase-test", "describe": "deep dive runs a grep-based trigger-phrase test on a skill description",
+      "run": "grep -c 'use this (when|whenever)' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m16-dd-covers-claude-md-duplication-anti-pattern", "describe": "deep dive demonstrates the CLAUDE.md-duplication anti-pattern with a run-tests example skill",
+      "run": "grep -c 'run-tests' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m16-dd-covers-library-duplication-anti-pattern", "describe": "deep dive demonstrates the library-duplication anti-pattern with an audit-deps example skill",
+      "run": "grep -c 'audit-deps' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m16-dd-uses-scratch-copy-for-demonstrations", "describe": "all skill-file demonstrations run in a scratch copy, not the real project",
+      "run": "grep -c '/tmp/m16-dd-scratch' site/docs/m16-agent-skills-mental-model/deep-dive.md",
+      "assert": { "matches": "^[5-9]|^[1-9][0-9]" }, "weight": 1 },
+
+    { "id": "m16-dd-scratch-not-left-behind", "describe": "teardown removed the scratch copy -- no leftover state on the shared runner",
+      "run": "bash -c \"test -d /tmp/m16-dd-scratch && echo present || echo absent\"",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m16-dd-real-project-has-no-claude-skills-dir", "describe": "the deep dive never creates .claude/skills/ in the real project -- Module 17 owns that deliverable",
+      "run": "bash -c \"test -d labs/platformops/.claude/skills && echo present || echo absent\"",
+      "assert": { "contains": "absent" }, "weight": 2 },
+
+    { "id": "m16-dd-real-project-still-passes-tests", "describe": "the real project's test suite still passes -- nothing on this page touched it",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m16-dd-real-project-version-unchanged", "describe": "the real project's version is still 1.2.0 after the deep dive",
+      "run": "grep -c 'version = \"1.2.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m16-dd-catalogue-still-intact", "describe": "the real project's skills/CATALOGUE.md from the lab is untouched by the deep dive",
+      "run": "bash -c \"grep -c '^| \\`' labs/platformops/skills/CATALOGUE.md\"",
+      "assert": { "matches": "^5$" }, "weight": 2 }
+  ]
+}

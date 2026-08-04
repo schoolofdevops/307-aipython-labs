@@ -1,0 +1,107 @@
+{
+  "checks": [
+    { "id": "m16-worksheet-asset-exists", "describe": "the classification worksheet asset exists in the labs repo",
+      "run": "test -f labs/m16/classification-worksheet.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m16-worksheet-has-ten-rows", "describe": "the worksheet has all ten example rows",
+      "run": "grep -c '^| [0-9]* |' labs/m16/classification-worksheet.md",
+      "assert": { "matches": "^10$" }, "weight": 2 },
+
+    { "id": "m16-worksheet-covers-five-categories", "describe": "the worksheet's answer key names all five taxonomy labels",
+      "run": "bash -c \"grep -c -i 'repository instruction\\|python library\\|cli command\\|mcp tool' labs/m16/classification-worksheet.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-classification-file-cleaned-up", "describe": "Teardown: the temporary classification.md was removed from the live project",
+      "run": "bash -c \"cd labs/platformops && test -f classification.md && echo still-present || echo cleaned\"",
+      "assert": { "contains": "cleaned" }, "weight": 2 },
+
+    { "id": "m16-skills-dir-created", "describe": "Phase 2: skills/ directory exists in the live project",
+      "run": "bash -c \"test -d labs/platformops/skills && echo present || echo missing\"",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m16-catalogue-exists", "describe": "Phase 2: skills/CATALOGUE.md exists",
+      "run": "bash -c \"test -f labs/platformops/skills/CATALOGUE.md && echo present || echo missing\"",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m16-catalogue-has-five-entries", "describe": "the catalogue lists exactly five candidate skills",
+      "run": "bash -c \"grep -c '^| \\`' labs/platformops/skills/CATALOGUE.md\"",
+      "assert": { "matches": "^5$" }, "weight": 3 },
+
+    { "id": "m16-catalogue-has-two-sections", "describe": "the catalogue has the Candidate skills and Boundary notes sections",
+      "run": "bash -c \"grep -c '^## ' labs/platformops/skills/CATALOGUE.md\"",
+      "assert": { "matches": "^2$" }, "weight": 1 },
+
+    { "id": "m16-catalogue-names-changelog-entry", "describe": "the catalogue includes the changelog-entry skill from the lesson",
+      "run": "grep -c 'changelog-entry' labs/platformops/skills/CATALOGUE.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-catalogue-names-service-readiness", "describe": "the catalogue includes a service-readiness-review skill",
+      "run": "grep -c 'service-readiness-review' labs/platformops/skills/CATALOGUE.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m16-catalogue-references-boundary-rules", "describe": "the catalogue explains why its entries pass the two boundary checks from the lesson",
+      "run": "bash -c \"grep -c -i 'CLAUDE.md\\|duplicate' labs/platformops/skills/CATALOGUE.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-no-version-bump", "describe": "this module does not bump the platformops release -- pyproject.toml stays at 1.2.0",
+      "run": "grep -c 'version = \"1.2.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m16-changelog-unchanged", "describe": "this module does not add a new CHANGELOG.md release entry",
+      "run": "bash -c \"grep -c '\\[1.3.0\\]' labs/platformops/CHANGELOG.md || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m16-no-source-code-touched", "describe": "src/platformops/ is untouched by this module -- the catalogue is a planning document only",
+      "run": "bash -c \"cd labs/platformops && git status --porcelain src/platformops/ | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m16-cli-still-works", "describe": "regression: the CLI still runs after this module's work",
+      "run": "cd labs/platformops && uv run platformops --help",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m16-tests-still-pass", "describe": "regression: the full test suite still passes, same as the end of Module 15",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m16-checkpoint-v1-2-regression-safe", "describe": "regression: the frozen v1.2 checkpoint this module started from still passes its own tests, untouched",
+      "run": "bash -c \"cd labs/checkpoints/v1.2 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m16-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m16-agent-skills-mental-model/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-lesson-covers-five-way-taxonomy", "describe": "the lesson names all five categories of the taxonomy",
+      "run": "bash -c \"grep -c -i 'repository instruction\\|python library\\|cli command\\|mcp server' site/docs/m16-agent-skills-mental-model/lesson.md\"",
+      "assert": { "matches": "^[4-9]|^[1-9][0-9]" }, "weight": 1 },
+
+    { "id": "m16-lesson-covers-progressive-disclosure", "describe": "the lesson explains progressive disclosure by name",
+      "run": "grep -c -i 'progressive disclosure' site/docs/m16-agent-skills-mental-model/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-lesson-has-skill-md-example", "describe": "the lesson shows a real SKILL.md example with frontmatter",
+      "run": "grep -c 'name: changelog-entry' site/docs/m16-agent-skills-mental-model/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -c -i 'common pitfalls' site/docs/m16-agent-skills-mental-model/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-lab-has-two-phases", "describe": "lab.md has both Phase 1 and Phase 2",
+      "run": "bash -c \"grep -c '## Phase [12]' site/docs/m16-agent-skills-mental-model/lab.md\"",
+      "assert": { "matches": "^2$" }, "weight": 1 },
+
+    { "id": "m16-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.2 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.2' site/docs/m16-agent-skills-mental-model/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m16-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m16-agent-skills-mental-model/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m16-lab-does-not-claim-version-bump", "describe": "lab.md never tells the learner to bump the version or tag a release",
+      "run": "bash -c \"grep -c -i 'git tag v1.3\\|version = \\\"1.3' site/docs/m16-agent-skills-mental-model/lab.md || true\"",
+      "assert": { "matches": "^0$" }, "weight": 1 }
+  ]
+}
