@@ -1,0 +1,31 @@
+{
+  "checks": [
+    { "id": "m12-dd-pytest-discovery-names-test-prefix", "describe": "pytest only discovers functions named test_* (not plain functions)",
+      "run": "python3 -c \"import subprocess; r=subprocess.run(['uv','run','pytest','--collect-only','-q'],cwd='labs/checkpoints/v0.10',capture_output=True,text=True,timeout=15); items=[l for l in r.stdout.splitlines() if '::test_' in l]; print('discovered' if len(items)>10 else 'too-few')\"",
+      "assert": { "contains": "discovered" }, "weight": 2 },
+
+    { "id": "m12-dd-conftest-exists", "describe": "a conftest.py exists in the test directory (shared fixtures)",
+      "run": "ls labs/checkpoints/v0.10/tests/conftest.py 2>/dev/null && echo exists || echo missing",
+      "assert": { "contains": "exists" }, "weight": 1 },
+
+    { "id": "m12-dd-assert-rewriting-shows-values", "describe": "pytest assertion rewriting shows actual vs expected on failure",
+      "run": "cd labs/checkpoints/v0.10 && uv run python3 -c \"import pytest; pytest.main(['-x','--tb=short','-q','--co'])\" 2>&1 | head -1; echo ok",
+      "assert": { "contains": "ok" }, "weight": 1 },
+
+    { "id": "m12-dd-coverage-tool-installed", "describe": "pytest-cov is available in the project's dev dependencies",
+      "run": "cd labs/checkpoints/v0.10 && uv run pytest --co -p no:cacheprovider --cov=platformops -q 2>&1 | tail -1; echo done",
+      "assert": { "contains": "done" }, "weight": 2 },
+
+    { "id": "m12-dd-parametrize-still-in-servicedef", "describe": "parametrize is used in test_servicedef.py (proof of the lesson's concept in real code)",
+      "run": "grep -c '@pytest.mark.parametrize' labs/checkpoints/v0.10/tests/test_servicedef.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m12-dd-monkeypatch-used-not-mock-patch", "describe": "the test suite uses monkeypatch more than unittest.mock.patch (lesson recommendation)",
+      "run": "bash -c \"mp=$(grep -rl 'monkeypatch' labs/checkpoints/v0.10/tests/*.py 2>/dev/null | wc -l); up=$(grep -rl 'mock.patch' labs/checkpoints/v0.10/tests/*.py 2>/dev/null | wc -l); echo mp=$mp up=$up; [ $mp -ge $up ] && echo preferred || echo not-preferred\"",
+      "assert": { "contains": "preferred" }, "weight": 1 },
+
+    { "id": "m12-dd-fixture-scope-default-is-function", "describe": "fixtures without an explicit scope default to function-level (no leftover state between tests)",
+      "run": "python3 -c \"import ast; t=open('labs/checkpoints/v0.10/tests/test_local_ops.py').read(); tree=ast.parse(t); fixtures=[n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and any(isinstance(d,ast.Name) and d.id=='fixture' or isinstance(d,ast.Attribute) and d.attr=='fixture' for d in n.decorator_list if hasattr(n,'decorator_list'))]; print(len(fixtures),'fixtures found')\"",
+      "assert": { "matches": "\\d+ fixtures found" }, "weight": 1 }
+  ]
+}

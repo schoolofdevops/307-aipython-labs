@@ -1,0 +1,91 @@
+{
+  "checks": [
+    { "id": "m12-checkpoint-version-1-0", "describe": "pyproject.toml carries the v1.0.0 release version",
+      "run": "grep -c 'version = \"1.0.0\"' labs/checkpoints/v1.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m12-checkpoint-readme-names-v1-0", "describe": "README.md names the v1.0 release",
+      "run": "grep -c 'v1.0' labs/checkpoints/v1.0/README.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m12-checkpoint-no-new-source-files", "describe": "no new source module was added -- this release only changes tests/",
+      "run": "bash -c \"diff <(ls labs/checkpoints/v0.9/src/platformops/) <(ls labs/checkpoints/v1.0/src/platformops/) | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-ruff-check", "describe": "ruff check passes",
+      "run": "cd labs/checkpoints/v1.0 && uv run ruff check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m12-checkpoint-ruff-format", "describe": "ruff format is clean",
+      "run": "cd labs/checkpoints/v1.0 && uv run ruff format --check .",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m12-checkpoint-pytest", "describe": "pytest passes",
+      "run": "cd labs/checkpoints/v1.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "matches": "passed" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-test-count-exceeds-m11", "describe": "total test count is higher than M11's 126",
+      "run": "python3 -c \"import subprocess,re; r=subprocess.run(['uv','run','pytest','-q'],cwd='labs/checkpoints/v1.0',capture_output=True,text=True); m=re.search(r'(\\d+) passed', r.stdout+r.stderr); n=int(m.group(1)) if m else 0; print('higher-than-126' if n>126 else 'not-higher')\"",
+      "assert": { "contains": "higher-than-126" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-servicedef-parametrize-exists", "describe": "test_servicedef.py uses @pytest.mark.parametrize for the bad-field-value cases",
+      "run": "grep -c '@pytest.mark.parametrize' labs/checkpoints/v1.0/tests/test_servicedef.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-servicedef-parametrize-covers-four-fields", "describe": "the parametrized servicedef test still names all four fields",
+      "run": "bash -c \"grep -c -E 'aws_account|environment|region|kubernetes_namespace' labs/checkpoints/v1.0/tests/test_servicedef.py\"",
+      "assert": { "matches": "^[4-9]" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-local-ops-captured-subprocess-fixture", "describe": "a captured_subprocess_call fixture exists in test_local_ops.py",
+      "run": "grep -c 'def captured_subprocess_call' labs/checkpoints/v1.0/tests/test_local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-docker-info-safety-test-exists", "describe": "docker_info() has its own never-uses-shell-true test",
+      "run": "grep -c 'def test_docker_info_never_uses_shell_true' labs/checkpoints/v1.0/tests/test_local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-container-list-safety-test-exists", "describe": "container_list() has its own never-uses-shell-true test",
+      "run": "grep -c 'def test_container_list_never_uses_shell_true' labs/checkpoints/v1.0/tests/test_local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-config-idempotency-test-exists", "describe": "an idempotency test for the config CLI exists",
+      "run": "grep -c 'def test_running_the_config_cli_twice_produces_the_same_resolved_file' labs/checkpoints/v1.0/tests/test_config.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-check-security-e2e-tests-exist", "describe": "check-security has an end-to-end (non-mocked) test in test_cli.py",
+      "run": "grep -c 'def test_check_security_end_to_end' labs/checkpoints/v1.0/tests/test_cli.py",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-httpclient-generic-httperror-test-exists", "describe": "check_health's generic httpx.HTTPError branch is tested (Phase 2)",
+      "run": "grep -ci 'httperror' labs/checkpoints/v1.0/tests/test_httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-httpclient-sleep-backoff-test-exists", "describe": "_sleep_backoff has a direct unit test (Phase 2)",
+      "run": "grep -c 'sleep_backoff' labs/checkpoints/v1.0/tests/test_httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-httpclient-next-page-url-test-exists", "describe": "_next_page_url has direct unit tests (Phase 2)",
+      "run": "grep -c 'next_page_url' labs/checkpoints/v1.0/tests/test_httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-monkeypatch-usage-present", "describe": "monkeypatch is still used across the test suite",
+      "run": "bash -c \"grep -rl 'monkeypatch' labs/checkpoints/v1.0/tests/*.py | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^[4-9]" }, "weight": 1 },
+
+    { "id": "m12-checkpoint-tmp-path-usage-present", "describe": "tmp_path is used across the test suite",
+      "run": "bash -c \"grep -rl 'tmp_path' labs/checkpoints/v1.0/tests/*.py | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^[3-9]" }, "weight": 1 },
+
+    { "id": "m12-checkpoint-no-shell-true-regression", "describe": "shell=True still never appears in src/ (unchanged from M11)",
+      "run": "bash -c \"grep -rn --include='*.py' 'shell=True' labs/checkpoints/v1.0/src/ | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m12-checkpoint-help-unchanged", "describe": "--help still lists every command (no CLI surface change this module)",
+      "run": "cd labs/checkpoints/v1.0 && uv run platformops --help",
+      "assert": { "contains": "check-security" }, "weight": 1 },
+
+    { "id": "m12-checkpoint-version-command-reports-1-0-0", "describe": "platformops version reports 1.0.0",
+      "run": "cd labs/checkpoints/v1.0 && uv run platformops version",
+      "assert": { "contains": "1.0.0" }, "weight": 2 }
+  ]
+}
