@@ -1,0 +1,95 @@
+{
+  "checks": [
+    { "id": "m20-dd-file-exists", "describe": "deep-dive.md exists for M20",
+      "run": "test -f site/docs/m20-governing-agent-skills/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m20-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c 'Use it when:' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m20-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-dd-does-not-use-bare-diff", "describe": "deep dive never asks the learner to run bare diff -- a shell hook can make it misreport differing files as identical, so every comparison uses cmp instead",
+      "run": "grep -c 'diff ' site/docs/m20-governing-agent-skills/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m20-dd-uses-cmp", "describe": "deep dive uses cmp for its determinism proof",
+      "run": "grep -c 'cmp /tmp' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-dd-covers-broken-fixture-demo", "describe": "deep dive proves the lint tool catches real problems using a deliberately broken fixture",
+      "run": "grep -c 'm20-broken-skill' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m20-dd-broken-fixture-shows-failed-checks", "describe": "deep dive shows the real 5-of-6 failing checks against the broken fixture",
+      "run": "grep -c '\"passed\": false' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-dd-covers-smoke-test-boundary-table", "describe": "deep dive has the three-layer coverage table (unit tests / lint / smoke test)",
+      "run": "grep -c 'What it cannot catch' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-covers-smoke-test-grep-qi-mechanism", "describe": "deep dive shows the exact grep -qi mechanism the smoke test relies on",
+      "run": "grep -c 'grep -qi' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m20-dd-covers-version-pinning-evidence", "describe": "deep dive cross-checks a skill's pinned version against its own CHANGELOG entry",
+      "run": "grep -c 'Script-Backed Agent Skill Foundation' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-dd-analogy-museum-or-library-continuity", "describe": "deep dive keeps the lesson's library analogy consistent (edition number vs catalog software)",
+      "run": "grep -ci 'edition' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-dd-live-lint-fails-broken-fixture", "describe": "live check: skill_lint.py correctly fails a deliberately broken skill file",
+      "run": "mkdir -p /tmp/m20-dd-check-broken && printf -- '---\\nname: broken\\ndescription: nope\\n---\\n\\n# Broken\\n\\n## Steps\\n\\n1. one\\n2. two\\n' > /tmp/m20-dd-check-broken/SKILL.md && cd labs/platformops && uv run python scripts/skill_lint.py /tmp/m20-dd-check-broken/SKILL.md >/dev/null 2>&1; echo $?; rm -rf /tmp/m20-dd-check-broken",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-dd-live-lint-passes-all-three-real-skills", "describe": "live check: skill_lint.py passes all three real skills, proving the tool discriminates rather than always failing or always passing",
+      "run": "cd labs/platformops && for s in service-readiness-review platformops-service-readiness incident-context-collector; do uv run python scripts/skill_lint.py .claude/skills/$s/SKILL.md >/dev/null 2>&1 || echo BAD-$s; done; echo done",
+      "assert": { "contains": "done" }, "weight": 3 },
+
+    { "id": "m20-dd-live-determinism", "describe": "live check: running skill_lint.py twice against the same file produces byte-identical output (cmp, not diff)",
+      "run": "cd labs/platformops && uv run python scripts/skill_lint.py .claude/skills/incident-context-collector/SKILL.md > /tmp/m20-dd-out1.json 2>/dev/null; uv run python scripts/skill_lint.py .claude/skills/incident-context-collector/SKILL.md > /tmp/m20-dd-out2.json 2>/dev/null; cmp /tmp/m20-dd-out1.json /tmp/m20-dd-out2.json && echo identical || echo differs; rm -f /tmp/m20-dd-out1.json /tmp/m20-dd-out2.json",
+      "assert": { "contains": "identical" }, "weight": 3 },
+
+    { "id": "m20-dd-live-smoke-test-mechanism-present", "describe": "live check: the real smoke test script's field-matching call still uses grep -qi against $label",
+      "run": "cd labs/platformops && grep -c 'grep -qi -- \"\\$label\"' scripts/smoke_test_skill.sh",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-live-version-pin-matches-changelog", "describe": "live check: service-readiness-review's pinned version matches the CHANGELOG release that last changed its content",
+      "run": "cd labs/platformops && grep -c '^version: 1.3.0' .claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-dd-live-tests-still-pass", "describe": "regression: the real project's test suite still passes -- nothing on this page touched it",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m20-dd-real-project-version-is-1-5-0", "describe": "the real project's version is already 1.5.0 -- the lab's version bump happened before this deep dive runs",
+      "run": "grep -c 'version = \"1.5.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

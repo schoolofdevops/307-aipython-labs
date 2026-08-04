@@ -1,0 +1,287 @@
+{
+  "checks": [
+    { "id": "m20-skill-lint-exists", "describe": "scripts/skill_lint.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/scripts/skill_lint.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-has-shebang", "describe": "skill_lint.py has a shebang line",
+      "run": "head -1 labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "contains": "#!/usr/bin/env python3" }, "weight": 1 },
+
+    { "id": "m20-skill-lint-has-six-checks", "describe": "skill_lint.py defines all six check functions",
+      "run": "grep -cE '^def check_(frontmatter_ratio|trigger_phrase|step_count|required_headings|agent_neutral_core|read_only)' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^6$" }, "weight": 3 },
+
+    { "id": "m20-skill-lint-eight-required-headings", "describe": "REQUIRED_HEADINGS lists exactly the eight headings the real skills use",
+      "run": "grep -c 'Tools this skill may use' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-step-range", "describe": "step count range is 4-8, matching the course convention",
+      "run": "grep -c 'MIN_STEPS = 4' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-frontmatter-ratio-20pct", "describe": "frontmatter ratio threshold is 20%",
+      "run": "grep -c 'MAX_FRONTMATTER_RATIO = 0.20' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-uses-json-dumps", "describe": "skill_lint.py prints its report as JSON",
+      "run": "grep -c 'json.dumps' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-exit-codes", "describe": "skill_lint.py has exit-0, exit-1 and exit-2 paths",
+      "run": "grep -c 'return 0 if report' labs/checkpoints/v1.5.0/scripts/skill_lint.py; grep -c 'return 2' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "contains": "1" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-uses-sys-exit", "describe": "skill_lint.py exits via sys.exit(main())",
+      "run": "grep -c 'sys.exit(main())' labs/checkpoints/v1.5.0/scripts/skill_lint.py",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-skill-lint-live-passes-service-readiness-review", "describe": "live check: skill_lint.py passes service-readiness-review",
+      "run": "cd labs/platformops && uv run python scripts/skill_lint.py .claude/skills/service-readiness-review/SKILL.md >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m20-skill-lint-live-passes-platformops-service-readiness", "describe": "live check: skill_lint.py passes platformops-service-readiness",
+      "run": "cd labs/platformops && uv run python scripts/skill_lint.py .claude/skills/platformops-service-readiness/SKILL.md >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m20-skill-lint-live-passes-incident-context-collector", "describe": "live check: skill_lint.py passes incident-context-collector",
+      "run": "cd labs/platformops && uv run python scripts/skill_lint.py .claude/skills/incident-context-collector/SKILL.md >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m20-skill-lint-live-emits-valid-json", "describe": "live check: skill_lint.py's stdout parses as JSON",
+      "run": "cd labs/platformops && uv run python scripts/skill_lint.py .claude/skills/incident-context-collector/SKILL.md 2>/dev/null | python3 -c 'import json,sys; json.load(sys.stdin)' && echo valid-json",
+      "assert": { "contains": "valid-json" }, "weight": 2 },
+
+    { "id": "m20-incident-context-exists", "describe": "scripts/incident_context.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/scripts/incident_context.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-incident-context-imports-git-status", "describe": "the script imports git_status from the tested package",
+      "run": "grep -c 'from platformops.local_ops import docker_info, git_status' labs/checkpoints/v1.5.0/scripts/incident_context.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-incident-context-imports-check-health", "describe": "the script imports check_health from the tested package",
+      "run": "grep -c 'from platformops.httpclient import check_health' labs/checkpoints/v1.5.0/scripts/incident_context.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-incident-context-no-raw-subprocess-import", "describe": "the orchestrator never imports subprocess directly -- it only calls git_status()/docker_info()",
+      "run": "grep -c '^import subprocess' labs/checkpoints/v1.5.0/scripts/incident_context.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m20-incident-context-no-raw-httpx-import", "describe": "the orchestrator never imports httpx directly -- it only calls check_health()",
+      "run": "grep -c '^import httpx' labs/checkpoints/v1.5.0/scripts/incident_context.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m20-incident-context-has-exit-0-and-1-paths", "describe": "the script returns 1 if has_concern else 0",
+      "run": "grep -c 'return report, (1 if has_concern else 0)' labs/checkpoints/v1.5.0/scripts/incident_context.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-incident-context-has-gather-report", "describe": "gather_report() is its own named, callable function",
+      "run": "grep -c 'def gather_report' labs/checkpoints/v1.5.0/scripts/incident_context.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-incident-context-live-exits-1-when-dirty-or-docker-down", "describe": "live check: running against this repo (which has other uncommitted work) exits non-zero",
+      "run": "cd labs/platformops && uv run python scripts/incident_context.py --repo-path . >/dev/null 2>&1; echo $?",
+      "assert": { "matches": "^[01]$" }, "weight": 2 },
+
+    { "id": "m20-incident-context-live-emits-valid-json", "describe": "live check: incident_context.py's stdout parses as JSON",
+      "run": "cd labs/platformops && uv run python scripts/incident_context.py --repo-path . 2>/dev/null | python3 -c 'import json,sys; json.load(sys.stdin)' && echo valid-json",
+      "assert": { "contains": "valid-json" }, "weight": 2 },
+
+    { "id": "m20-smoke-test-script-exists", "describe": "scripts/smoke_test_skill.sh exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/scripts/smoke_test_skill.sh && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-smoke-test-script-executable", "describe": "smoke_test_skill.sh is executable",
+      "run": "test -x labs/checkpoints/v1.5.0/scripts/smoke_test_skill.sh && echo executable || echo not-executable",
+      "assert": { "contains": "executable" }, "weight": 1 },
+
+    { "id": "m20-smoke-test-invokes-claude", "describe": "smoke_test_skill.sh invokes claude -p non-interactively",
+      "run": "grep -c 'claude -p' labs/checkpoints/v1.5.0/scripts/smoke_test_skill.sh",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-smoke-test-invokes-codex", "describe": "smoke_test_skill.sh invokes codex exec non-interactively",
+      "run": "grep -c 'codex exec' labs/checkpoints/v1.5.0/scripts/smoke_test_skill.sh",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-smoke-test-derives-labels-from-skill", "describe": "smoke_test_skill.sh parses expected labels from the skill's own Output section, not a hardcoded list",
+      "run": "grep -c \"awk '/\\^## Output/\" labs/checkpoints/v1.5.0/scripts/smoke_test_skill.sh",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-incident-skill-exists", "describe": "the new incident-context-collector skill exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-incident-skill-has-eight-sections", "describe": "the skill has all eight required body sections",
+      "run": "grep -c '^## ' labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m20-incident-skill-step-count-in-range", "describe": "the Steps section has between 4 and 8 numbered steps",
+      "run": "grep -cE '^[0-9]+\\. ' labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md",
+      "assert": { "matches": "^[4-8]$" }, "weight": 2 },
+
+    { "id": "m20-incident-skill-calls-script", "describe": "the skill tells the agent to run scripts/incident_context.py",
+      "run": "grep -c 'scripts/incident_context.py' labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m20-incident-skill-is-read-only", "describe": "the skill explicitly states it never writes, edits, deletes, restarts or deploys",
+      "run": "grep -c 'does not write, edit, or delete any file' labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-incident-skill-has-version-field", "describe": "the new skill's frontmatter has a version field",
+      "run": "grep -c '^version: 1.5.0' labs/checkpoints/v1.5.0/.claude/skills/incident-context-collector/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-service-readiness-review-has-version-field", "describe": "service-readiness-review's frontmatter now has a version field",
+      "run": "grep -c '^version: 1.3.0' labs/checkpoints/v1.5.0/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-platformops-service-readiness-has-version-field", "describe": "platformops-service-readiness's frontmatter now has a version field",
+      "run": "grep -c '^version: 1.4.0' labs/checkpoints/v1.5.0/.claude/skills/platformops-service-readiness/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-skill-lint-live-fails-broken-fixture", "describe": "live check: skill_lint.py correctly fails a deliberately broken skill file, proving it is not a rubber stamp",
+      "run": "mkdir -p /tmp/m20-checks-broken-skill && printf -- '---\\nname: broken\\ndescription: nope\\n---\\n\\n# Broken\\n\\n## Steps\\n\\n1. one\\n2. two\\n' > /tmp/m20-checks-broken-skill/SKILL.md && cd labs/platformops && uv run python scripts/skill_lint.py /tmp/m20-checks-broken-skill/SKILL.md >/dev/null 2>&1; echo $?; rm -rf /tmp/m20-checks-broken-skill",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-tests-skill-lint-exist", "describe": "tests/test_skill_lint.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/tests/test_skill_lint.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-tests-skill-lint-cover-real-skills", "describe": "tests exercise skill_lint.py against the real, checked-in skill files, not only fixtures",
+      "run": "grep -c 'test_real_service_readiness_review_skill_passes\\|test_real_platformops_service_readiness_skill_passes' labs/checkpoints/v1.5.0/tests/test_skill_lint.py",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m20-tests-incident-context-exist", "describe": "tests/test_incident_context.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.5.0/tests/test_incident_context.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m20-tests-incident-context-cover-unknown-vs-concern", "describe": "tests distinguish UNKNOWN signals from real concerns",
+      "run": "grep -c 'is_not_a_concern' labs/checkpoints/v1.5.0/tests/test_incident_context.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-catalogue-has-shipped-table", "describe": "skills/CATALOGUE.md has a Shipped skills section",
+      "run": "grep -c '## Shipped skills' labs/checkpoints/v1.5.0/skills/CATALOGUE.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-catalogue-lists-incident-context-collector-shipped", "describe": "the shipped table names incident-context-collector",
+      "run": "sed -n '/## Shipped skills/,/## Candidate skills/p' labs/checkpoints/v1.5.0/skills/CATALOGUE.md | grep -c 'incident-context-collector'",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-catalogue-no-longer-lists-incident-context-as-candidate", "describe": "incident-context-collector was removed from the candidate table",
+      "run": "sed -n '/## Candidate skills/,$p' labs/checkpoints/v1.5.0/skills/CATALOGUE.md | grep -c 'incident-context-collector'",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m20-no-source-code-touched", "describe": "src/platformops/ is untouched by this module -- all new logic lives in scripts/",
+      "run": "cd labs/platformops && git status --porcelain src/platformops/ | wc -l | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m20-version-bumped", "describe": "pyproject.toml is bumped to 1.5.0",
+      "run": "grep -c 'version = \"1.5.0\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m20-changelog-has-1-5-0-section", "describe": "CHANGELOG.md has a [1.5.0] release section",
+      "run": "grep -c '## \\[1.5.0\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-changelog-mentions-skill-lint", "describe": "the [1.5.0] entry documents skill_lint.py",
+      "run": "grep -c 'skill_lint.py' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-changelog-mentions-incident-context", "describe": "the [1.5.0] entry documents incident_context.py",
+      "run": "grep -c 'incident_context.py' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-changelog-mentions-smoke-test", "describe": "the [1.5.0] entry documents smoke_test_skill.sh",
+      "run": "grep -c 'smoke_test_skill.sh' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-changelog-unreleased-reset", "describe": "the [Unreleased] section is empty again -- its prior entry moved into [1.5.0]",
+      "run": "sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' labs/platformops/CHANGELOG.md | sed '1d;$d' | tr -d '[:space:]' | wc -c | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m20-cli-still-works", "describe": "regression: the CLI still runs after this module's work",
+      "run": "cd labs/platformops && uv run platformops --help > /dev/null 2>&1 && echo cli-ok || echo cli-fail",
+      "assert": { "contains": "cli-ok" }, "weight": 2 },
+
+    { "id": "m20-cli-version-is-1-5-0", "describe": "regression: uv run platformops version reports 1.5.0",
+      "run": "cd labs/platformops && uv run platformops version",
+      "assert": { "contains": "1.5.0" }, "weight": 2 },
+
+    { "id": "m20-tests-still-pass", "describe": "regression: the full live test suite still passes at the new version",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m20-checkpoint-v1-4-0-regression-safe", "describe": "regression: the frozen v1.4.0 checkpoint this module started from still passes its own tests, untouched",
+      "run": "cd labs/checkpoints/v1.4.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m20-checkpoint-v1-5-0-no-venv", "describe": "the v1.5.0 checkpoint was snapshotted without .venv, per the versioned-checkpoint hard rule",
+      "run": "test -d labs/checkpoints/v1.5.0/.venv && echo present || echo absent",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m20-checkpoint-v1-5-0-version", "describe": "the v1.5.0 checkpoint's pyproject.toml records the bumped version",
+      "run": "grep -c 'version = \"1.5.0\"' labs/checkpoints/v1.5.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m20-governing-agent-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-lesson-covers-library-analogy", "describe": "the lesson uses the library/catalog analogy",
+      "run": "grep -ci 'librarian' site/docs/m20-governing-agent-skills/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m20-governing-agent-skills/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-lesson-avoids-insider-jargon", "describe": "the lesson does not use the banned insider jargon terms",
+      "run": "grep -ci 'vertical slice\\|scaffold\\|\\bseam\\b' site/docs/m20-governing-agent-skills/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m20-lab-has-three-phases", "describe": "lab.md has Phase 1, Phase 2 and Phase 3",
+      "run": "grep -c '^## Phase [123]' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^3$" }, "weight": 1 },
+
+    { "id": "m20-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.5.0 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.5.0' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-lab-invokes-claude-explicitly", "describe": "lab.md has an explicit non-interactive Claude Code invocation",
+      "run": "grep -c 'claude -p' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-lab-invokes-codex-explicitly", "describe": "lab.md has an explicit non-interactive Codex invocation",
+      "run": "grep -c 'codex exec' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-lab-has-troubleshooting", "describe": "lab.md has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m20-lab-imports-not-reimplements", "describe": "lab.md's script listing shows the orchestrator importing, not reimplementing, evidence logic",
+      "run": "grep -c 'from platformops.local_ops import docker_info, git_status' site/docs/m20-governing-agent-skills/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m20-quiz-question-count", "describe": "the quiz has between 10 and 15 questions (course's 10-15 rule)",
+      "run": "grep -c 'prompt:' site/docs/m20-governing-agent-skills/quiz.mdx",
+      "assert": { "matches": "^(1[0-5])$" }, "weight": 1 },
+
+    { "id": "m20-quiz-has-multiselect", "describe": "the quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m20-governing-agent-skills/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m20-deep-dive-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m20-deep-dive-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m20-governing-agent-skills/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
