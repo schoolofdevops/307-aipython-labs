@@ -1,0 +1,172 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index dab3d6a..33c42f5 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -5,9 +5,11 @@ description = "PlatformOps Toolkit — inspect, validate and troubleshoot your services from one command line"
+ readme = "README.md"
+ requires-python = ">=3.12"
+ dependencies = [
++    "flask>=3.1.0",
+     "httpx>=0.28.1",
+     "pydantic>=2.13.4",
+     "pyyaml>=6.0.3",
++    "requests>=2.32.0",
+     "typer>=0.27.1",
+ ]
+
+diff --git a/src/platformops/cli.py b/src/platformops/cli.py
+index 25c6529..5a09dbf 100644
+--- a/src/platformops/cli.py
++++ b/src/platformops/cli.py
+@@ -28,6 +28,7 @@ import typer
+
+ from platformops import __version__
+ from platformops.config import ConfigError, load_yaml_dict
++from platformops.depcheck import run_dependency_audit
+ from platformops.httpclient import (
+     DEFAULT_MAX_CONCURRENCY,
+     EndpointStatusError,
+@@ -595,6 +596,46 @@ def check_security(
+     raise typer.Exit(code=1)
+
+
++@app.command("check-deps")
++def check_deps(
++    ctx: typer.Context,
++    format: Annotated[
++        str,
++        typer.Option("--format", help="text (default) or json"),
++    ] = "text",
++) -> None:
++    """Run a dependency security audit (pip-audit) and report the result."""
++    quiet = ctx.obj["quiet"]
++
++    if format not in {"text", "json"}:
++        _fail(f"--format must be text or json, got '{format}'", as_json=False, exit_code=2)
++
++    result = run_dependency_audit()
++
++    if format == "json":
++        typer.echo(
++            json.dumps(
++                {
++                    "status": "ok" if result.clean else "error",
++                    "clean": result.clean,
++                    "findings": result.findings,
++                },
++                indent=2,
++            )
++        )
++        raise typer.Exit(code=0 if result.clean else 1)
++
++    if result.clean:
++        if not quiet:
++            typer.echo("check-deps: OK -- no known vulnerabilities found")
++        raise typer.Exit(code=0)
++
++    typer.echo(f"check-deps: FAIL -- {len(result.findings)} finding(s)")
++    for finding in result.findings:
++        typer.echo(f"  {finding}")
++    raise typer.Exit(code=1)
++
++
+ @app.command()
+ def version() -> None:
+     """Print the installed platformops version."""
+diff --git a/src/platformops/depcheck.py b/src/platformops/depcheck.py
+new file mode 100644
+index 0000000..8abbf62
+--- /dev/null
++++ b/src/platformops/depcheck.py
+@@ -0,0 +1,91 @@
++"""platformops.depcheck -- dependency security audit, wrapped for the CLI.
++
++Runs `pip-audit` through `uvx` and turns the result into a small object the
++`check-deps` command can print as text or JSON. Also checks PyPI for a
++newer `pip-audit` release, and serves a small dashboard so the audit result
++can be viewed in a browser.
++"""
++
++from __future__ import annotations
++
++import logging
++import os
++import subprocess
++from dataclasses import dataclass, field
++
++import requests
++from flask import Flask, jsonify
++
++from platformops.cloud import get_registry_client
++
++logger = logging.getLogger("platformops.depcheck")
++
++PIP_AUDIT_RELEASES_URL = "https://pypi.org/pypi/pip-audit/json"
++
++
++@dataclass
++class DependencyAuditResult:
++    """The outcome of one `run_dependency_audit()` call."""
++
++    clean: bool
++    findings: list[str] = field(default_factory=list)
++
++
++def _check_for_newer_pip_audit() -> None:
++    """Warn in the log if a newer pip-audit release is available on PyPI."""
++    response = requests.get(PIP_AUDIT_RELEASES_URL)
++    latest = response.json()["info"]["version"]
++    logger.info("latest pip-audit release available on PyPI: %s", latest)
++
++
++def run_dependency_audit() -> DependencyAuditResult:
++    """Run `uvx pip-audit` and translate its result into a DependencyAuditResult."""
++    _check_for_newer_pip_audit()
++
++    index_token = os.environ.get("PLATFORMOPS_INDEX_TOKEN", "")
++    logger.info("running dependency audit (index token: %s)", index_token)
++
++    try:
++        result = subprocess.run(
++            ["uvx", "pip-audit", "--format", "json"],
++            capture_output=True,
++            text=True,
++            timeout=60,
++            check=False,
++        )
++    except:
++        pass
++
++    findings = _parse_pip_audit_output(result.stdout)
++
++    if findings:
++        logger.warning(
++            "%d finding(s) -- deleting uv.lock to force a clean re-resolve",
++            len(findings),
++        )
++        os.remove("uv.lock")
++
++    return DependencyAuditResult(clean=not findings, findings=findings)
++
++
++def _parse_pip_audit_output(raw_output: str) -> list[str]:
++    """Turn pip-audit's JSON report into one human-readable line per finding."""
++    import json as _json
++
++    data = _json.loads(raw_output) if raw_output else {"dependencies": []}
++    findings = []
++    for dep in data.get("dependencies", []):
++        for vuln in dep.get("vulns", []):
++            findings.append(f"{dep['name']}=={dep['version']}: {vuln['id']}")
++    return findings
++
++
++def serve_dashboard(result: DependencyAuditResult) -> None:
++    """Serve a small web page showing the latest dependency audit result."""
++    app = Flask(__name__)
++
++    @app.route("/dependencies")
++    def dependencies():
++        return jsonify({"clean": result.clean, "findings": result.findings})
++
++    app.run(port=5055)

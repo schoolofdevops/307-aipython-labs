@@ -1,0 +1,71 @@
+{
+  "checks": [
+    { "id": "m14-dd-file-exists", "describe": "deep-dive.md exists for M14",
+      "run": "test -f site/docs/m14-working-with-coding-agents/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m14-dd-covers-context-window", "describe": "deep dive explains the context window concept",
+      "run": "bash -c \"grep -c -i 'context window\\|working context' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-covers-verification-gap", "describe": "deep dive names the verification gap",
+      "run": "bash -c \"grep -c -i 'verification gap' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "bash -c \"grep -c 'mermaid' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m14-dd-covers-spec-vs-conversation", "describe": "deep dive discusses specs vs conversations",
+      "run": "bash -c \"grep -c -i 'written spec\\|spec.*convers' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m14-dd-frontmatter-correct", "describe": "deep dive frontmatter has sidebar_position 4 and the exact sidebar_label",
+      "run": "bash -c \"grep -c 'sidebar_position: 4' site/docs/m14-working-with-coding-agents/deep-dive.md && grep -c \\\"sidebar_label: 'Deep Dive (Part 2)'\\\" site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "contains": "1" }, "weight": 2 },
+
+    { "id": "m14-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant 'Where this picks up' admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a real-work Use it when trigger",
+      "run": "bash -c \"grep -c '\\*\\*Use it when:\\*\\*' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-expected-output-placeholder-present", "describe": "commands carry the verbatim live-validation placeholder, not fabricated output",
+      "run": "bash -c \"grep -c 'expected output — folded in during live lab validation' site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-references-real-project-line-count-command", "describe": "the page measures the real project's size instead of asserting the token-budget claim abstractly",
+      "run": "bash -c \"grep -c \\\"find src/platformops -name '\\*.py'\\\" site/docs/m14-working-with-coding-agents/deep-dive.md\"",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m14-dd-references-hallucinated-module-by-corrected-name", "describe": "the hallucinated-import walkthrough matches the shipped rigged-diff.patch's module name (platformops.cloud), not a stale example",
+      "run": "grep -c 'platformops.cloud' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-git-diff-stat-scope-check-present", "describe": "the deep dive shows git diff --stat as a fast, before-you-read scope signal, beyond what the lab already covered",
+      "run": "grep -c 'git diff --stat' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-dd-changelog-observation-present", "describe": "the deep dive names the silently-dropped CHANGELOG.md requirement as a second failure mode beyond scope creep",
+      "run": "grep -c 'CHANGELOG.md' site/docs/m14-working-with-coding-agents/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m14-dd-real-project-still-two-thousand-plus-lines", "describe": "the real v1.1 checkpoint's src tree is genuinely in the size range the deep dive describes (self-contained, does not depend on any prior lab state)",
+      "run": "bash -c \"find labs/checkpoints/v1.1/src/platformops -name '*.py' | xargs wc -l | tail -1 | tr -s ' ' | sed 's/^ //' | cut -d' ' -f1\"",
+      "assert": { "matches": "^[1-9][0-9]{3}$" }, "weight": 2 },
+
+    { "id": "m14-dd-checkpoint-still-passes-pytest", "describe": "regression: the real v1.1 checkpoint's test suite still passes -- this page's scratch demonstrations never touch it",
+      "run": "bash -c \"cd labs/checkpoints/v1.1 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 }
+  ]
+}

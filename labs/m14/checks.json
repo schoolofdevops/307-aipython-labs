@@ -1,0 +1,111 @@
+{
+  "checks": [
+    { "id": "m14-lab-assets-present", "describe": "all M14 lab assets exist",
+      "run": "ls labs/m14/rigged-diff.patch labs/m14/review-template.md labs/m14/checks.json",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m14-review-template-has-six-rows", "describe": "review-template.md has exactly six empty findings rows",
+      "run": "grep -c '^| [1-6] |' labs/m14/review-template.md",
+      "assert": { "matches": "^6$" }, "weight": 2 },
+
+    { "id": "m14-review-template-lists-six-categories", "describe": "review-template.md names all six flaw categories",
+      "run": "bash -c \"grep -c -E 'missing-timeout|leaked-credential|swallowed-exception|hallucinated-api|needless-dependency|destructive-default' labs/m14/review-template.md\"",
+      "assert": { "matches": "^6$" }, "weight": 2 },
+
+    { "id": "m14-diff-touches-three-files", "describe": "the rigged diff modifies three files (pyproject.toml, cli.py, depcheck.py)",
+      "run": "grep -c '^diff --git' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^3$" }, "weight": 1 },
+
+    { "id": "m14-flaw1-requests-get-present", "describe": "F1: depcheck.py calls requests.get on the PyPI URL",
+      "run": "grep -c 'requests.get(PIP_AUDIT_RELEASES_URL)' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw1-requests-get-has-no-timeout", "describe": "F1: the requests.get call carries no timeout argument",
+      "run": "bash -c \"grep 'requests.get(PIP_AUDIT_RELEASES_URL)' labs/m14/rigged-diff.patch | grep -c timeout || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m14-flaw2-token-logged", "describe": "F2: logger.info includes the index token value in the log message",
+      "run": "grep -c 'index token: %s' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw2-token-from-env", "describe": "F2: the raw token is read from PLATFORMOPS_INDEX_TOKEN and passed to logger",
+      "run": "grep -c 'PLATFORMOPS_INDEX_TOKEN' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m14-flaw3-bare-except-pass", "describe": "F3: a bare except: is followed by pass",
+      "run": "bash -c \"grep -A1 'except:' labs/m14/rigged-diff.patch | grep -c 'pass$'\"",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw3-result-used-after-swallowed-exception", "describe": "F3: code still references result.stdout after the swallowed exception",
+      "run": "grep -c 'result.stdout' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m14-flaw4-hallucinated-import", "describe": "F4: depcheck.py imports from the non-existent platformops.cloud module",
+      "run": "grep -c 'from platformops.cloud import get_registry_client' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw4-cloud-module-not-in-project", "describe": "F4: platformops/cloud.py does not exist in the checked-out platformops checkpoints",
+      "run": "bash -c \"find labs/checkpoints -iname 'cloud.py' | wc -l | tr -d ' '\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m14-flaw5-flask-dependency-added", "describe": "F5: pyproject.toml gains a flask dependency",
+      "run": "grep -c 'flask>=3.1.0' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw5-requests-dependency-added", "describe": "F5: pyproject.toml gains a redundant requests dependency",
+      "run": "grep -c 'requests>=2.32.0' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m14-flaw6-os-remove-lockfile", "describe": "F6: run_dependency_audit deletes uv.lock without confirmation",
+      "run": "grep -c 'os.remove(\"uv.lock\")' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-flaw6-no-confirmation-guard", "describe": "F6: no confirmation, dry-run flag, or safety check appears near the os.remove call",
+      "run": "bash -c \"grep -B2 -A2 'os.remove' labs/m14/rigged-diff.patch | grep -c -E 'confirm|dry.run|are you sure' || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m14-scope-pyproject-touched", "describe": "the diff touches pyproject.toml (never on the spec's allowed-files list) -- a scope violation",
+      "run": "grep -c 'pyproject.toml' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m14-diff-does-not-touch-changelog", "describe": "the diff never touches CHANGELOG.md, even though the spec's allowed files asked for an [Unreleased] entry there -- a silently dropped requirement, not just an out-of-scope addition",
+      "run": "bash -c \"grep -c 'CHANGELOG.md' labs/m14/rigged-diff.patch || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m14-diff-adds-a-real-working-check-deps-command", "describe": "the diff's cli.py addition is genuinely correct and follows the existing Typer/_fail() pattern -- proof the diff mixes good code with the six flaws, not obviously bad code throughout",
+      "run": "grep -c 'app.command(\"check-deps\")' labs/m14/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-rigged-diff-is-valid-unified-diff", "describe": "the rigged diff is a valid unified diff with proper headers",
+      "run": "bash -c \"head -3 labs/m14/rigged-diff.patch | grep -c '^diff --git'\"",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m14-checkpoint-never-mutated-no-depcheck-module", "describe": "the real v1.1 checkpoint has no depcheck.py -- this module's review exercise never actually merges anything (no version bump)",
+      "run": "bash -c \"test -f labs/checkpoints/v1.1/src/platformops/depcheck.py && echo present || echo absent\"",
+      "assert": { "contains": "absent" }, "weight": 2 },
+
+    { "id": "m14-checkpoint-never-mutated-no-check-deps-command", "describe": "the real v1.1 checkpoint's CLI has no check-deps command yet -- confirms this module stays a review-only exercise",
+      "run": "bash -c \"grep -c 'check-deps' labs/checkpoints/v1.1/src/platformops/cli.py || true\"",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m14-checkpoint-still-passes-pytest", "describe": "regression: the real v1.1 checkpoint's test suite still passes untouched",
+      "run": "bash -c \"cd labs/checkpoints/v1.1 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m14-checkpoint-version-still-1-1", "describe": "the real v1.1 checkpoint's version is unchanged -- this module never bumps the release",
+      "run": "grep -c 'version = \"1.1.0\"' labs/checkpoints/v1.1/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m14-lesson-covers-six-flaw-categories", "describe": "the lesson names all six flaw categories the lab asks learners to find",
+      "run": "bash -c \"grep -c -E 'timeout|credential|exception|hallucinat|dependency|destructive' site/docs/m14-working-with-coding-agents/lesson.md\"",
+      "assert": { "matches": "^[1-9][0-9]*$" }, "weight": 1 },
+
+    { "id": "m14-lab-references-rigged-diff", "describe": "lab.md instructs the learner to read the rigged diff from the labs repo path",
+      "run": "grep -c '307-aipython-labs/labs/m14/rigged-diff.patch' site/docs/m14-working-with-coding-agents/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m14-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m14-working-with-coding-agents/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 }
+  ]
+}
