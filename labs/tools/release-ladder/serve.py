@@ -95,7 +95,7 @@ LADDER = [
             ("v0.7", "M9", "Repository and API Inspector"),
             ("v0.8", "M10", "Concurrent Health Checker"),
             ("v0.9", "M11", "Local Operations Adapter"),
-            ("v0.10", "M12", "Tested Automation Core"),
+            ("v1.0", "M12", "Tested Automation Core"),
         ],
     },
     {
@@ -103,7 +103,7 @@ LADDER = [
         "title": "Professional-Grade Python",
         "modules": "M13",
         "releases": [
-            ("v1.0", "M13", "Maintainable PlatformOps Foundation"),
+            ("v1.1", "M13", "Maintainable PlatformOps Foundation"),
         ],
     },
     {
@@ -111,7 +111,7 @@ LADDER = [
         "title": "Working With Coding Agents",
         "modules": "M14–M15",
         "releases": [
-            ("v1.1", "M15", "AI-Assisted Engineering Harness"),
+            ("v1.2", "M15", "AI-Assisted Engineering Harness"),
         ],
     },
     {
@@ -119,11 +119,11 @@ LADDER = [
         "title": "Agent Skills",
         "modules": "M16–M20",
         "releases": [
-            ("v1.2", "M16", "Agent Skills Architecture"),
-            ("v1.2.1", "M17", "Service Review Skill"),
-            ("v1.3", "M18", "Script-Backed Agent Skill Foundation"),
-            ("v1.4", "M19", "Portable Service Readiness Skill"),
-            ("v1.5", "M20", "Governed Agent Skill Library"),
+            ("v1.3", "M16", "Agent Skills Architecture"),
+            ("v1.3.1", "M17", "Service Review Skill"),
+            ("v1.4", "M18", "Script-Backed Agent Skill Foundation"),
+            ("v1.5", "M19", "Portable Service Readiness Skill"),
+            ("v1.6", "M20", "Governed Agent Skill Library"),
         ],
     },
     {
@@ -131,11 +131,11 @@ LADDER = [
         "title": "Cloud Automation With AWS",
         "modules": "M21–M25",
         "releases": [
-            ("v1.6", "M21", "AWS Resource Inventory"),
-            ("v1.7", "M22", "Local AWS Automation Environment"),
-            ("v1.8", "M23", "Multi-Region Cloud Inventory"),
-            ("v1.9", "M24", "Cloud Hygiene Auditor"),
-            ("v2.0", "M25", "Governed Cloud Remediation"),
+            ("v1.7", "M21", "AWS Resource Inventory"),
+            ("v1.8", "M22", "Local AWS Automation Environment"),
+            ("v1.9", "M23", "Multi-Region Cloud Inventory"),
+            ("v2.0", "M24", "Cloud Hygiene Auditor"),
+            ("v2.1", "M25", "Governed Cloud Remediation"),
         ],
     },
     {
@@ -143,10 +143,10 @@ LADDER = [
         "title": "CI/CD and Kubernetes",
         "modules": "M26–M29",
         "releases": [
-            ("v2.1", "M26", "Release Readiness Checker"),
-            ("v2.2", "M27", "Containerized PlatformOps"),
-            ("v2.3", "M28", "Kubernetes Health Inspector"),
-            ("v2.4", "M29", "Governed Kubernetes Operations"),
+            ("v2.2", "M26", "Release Readiness Checker"),
+            ("v2.3", "M27", "Containerized PlatformOps"),
+            ("v2.4", "M28", "Kubernetes Health Inspector"),
+            ("v2.5", "M29", "Governed Kubernetes Operations"),
         ],
     },
     {
@@ -154,11 +154,11 @@ LADDER = [
         "title": "Observability and Platform APIs",
         "modules": "M30–M34",
         "releases": [
-            ("v2.5", "M30", "Observable Automation"),
-            ("v2.6", "M31", "Incident Context Collector"),
-            ("v2.7", "M32", "PlatformOps Internal API"),
-            ("v2.8", "M33", "AI Workload Inspector"),
-            ("v2.9", "M34", "AI Release Readiness"),
+            ("v2.6", "M30", "Observable Automation"),
+            ("v2.7", "M31", "Incident Context Collector"),
+            ("v2.8", "M32", "PlatformOps Internal API"),
+            ("v2.9", "M33", "AI Workload Inspector"),
+            ("v2.10", "M34", "AI Release Readiness"),
         ],
     },
     {
@@ -166,10 +166,10 @@ LADDER = [
         "title": "Agentic Operations and Capstone",
         "modules": "M35–M39",
         "releases": [
-            ("v2.10", "M35", "Agent Tool Library"),
-            ("v2.11", "M36", "PlatformOps MCP Server"),
-            ("v2.12", "M37", "Governed Agentic Operations"),
-            ("v2.13", "M38", "Production Release Candidate"),
+            ("v2.11", "M35", "Agent Tool Library"),
+            ("v2.12", "M36", "PlatformOps MCP Server"),
+            ("v2.13", "M37", "Governed Agentic Operations"),
+            ("v2.14", "M38", "Production Release Candidate"),
             ("v3.0", "M39", "Production PlatformOps Toolkit"),
         ],
     },

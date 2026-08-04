@@ -1,31 +1,27 @@
 {
   "checks": [
-    { "id": "m12-dd-pytest-discovery-names-test-prefix", "describe": "pytest only discovers functions named test_* (not plain functions)",
-      "run": "python3 -c \"import subprocess; r=subprocess.run(['uv','run','pytest','--collect-only','-q'],cwd='labs/checkpoints/v0.10',capture_output=True,text=True,timeout=15); items=[l for l in r.stdout.splitlines() if '::test_' in l]; print('discovered' if len(items)>10 else 'too-few')\"",
-      "assert": { "contains": "discovered" }, "weight": 2 },
+    { "id": "m12-dd-checkpoint-tests-still-pass", "describe": "the real v1.0 checkpoint test suite still passes (regression check ahead of the scratch demos)",
+      "run": "bash -c \"cd labs/checkpoints/v1.0 && uv run pytest -q 2>&1 | tail -1\"",
+      "assert": { "contains": "passed" }, "weight": 2 },
 
-    { "id": "m12-dd-conftest-exists", "describe": "a conftest.py exists in the test directory (shared fixtures)",
-      "run": "ls labs/checkpoints/v0.10/tests/conftest.py 2>/dev/null && echo exists || echo missing",
-      "assert": { "contains": "exists" }, "weight": 1 },
+    { "id": "m12-dd-discovery-ignores-non-test-prefixed-function", "describe": "pytest collects only the test_-prefixed function in a scratch file, never the helper",
+      "run": "bash -c \"mkdir -p /tmp/m12dd && cat <<'PYEOF' > /tmp/m12dd/test_demo.py\ndef test_collected():\n    assert True\n\ndef helper_not_collected():\n    assert True\nPYEOF\ncd labs/checkpoints/v1.0 && uv run pytest /tmp/m12dd/test_demo.py --collect-only -q\"",
+      "assert": { "contains": "1 test collected" }, "weight": 3 },
 
-    { "id": "m12-dd-assert-rewriting-shows-values", "describe": "pytest assertion rewriting shows actual vs expected on failure",
-      "run": "cd labs/checkpoints/v0.10 && uv run python3 -c \"import pytest; pytest.main(['-x','--tb=short','-q','--co'])\" 2>&1 | head -1; echo ok",
-      "assert": { "contains": "ok" }, "weight": 1 },
+    { "id": "m12-dd-fixture-teardown-runs-after-a-failing-test", "describe": "a yield fixture's teardown half runs even when the test using it fails",
+      "run": "bash -c \"mkdir -p /tmp/m12dd && cat <<'PYEOF' > /tmp/m12dd/test_fixture_demo.py\nimport pytest\n\n@pytest.fixture\ndef traced():\n    print('SETUP')\n    yield 1\n    print('TEARDOWN')\n\ndef test_fails(traced):\n    print('BODY')\n    assert False\nPYEOF\ncd labs/checkpoints/v1.0 && uv run pytest /tmp/m12dd/test_fixture_demo.py -s -q\"",
+      "assert": { "contains": "TEARDOWN" }, "weight": 3 },
 
-    { "id": "m12-dd-coverage-tool-installed", "describe": "pytest-cov is available in the project's dev dependencies",
-      "run": "cd labs/checkpoints/v0.10 && uv run pytest --co -p no:cacheprovider --cov=platformops -q 2>&1 | tail -1; echo done",
-      "assert": { "contains": "done" }, "weight": 2 },
+    { "id": "m12-dd-assertion-rewriting-shows-index-level-detail", "describe": "pytest's assertion rewriting names the exact index where two lists differ",
+      "run": "bash -c \"mkdir -p /tmp/m12dd && cat <<'PYEOF' > /tmp/m12dd/test_assert_demo.py\ndef test_fails():\n    assert [1, 2, 3] == [1, 2, 4]\nPYEOF\ncd labs/checkpoints/v1.0 && uv run pytest /tmp/m12dd/test_assert_demo.py -q\"",
+      "assert": { "contains": "At index 2 diff" }, "weight": 3 },
 
-    { "id": "m12-dd-parametrize-still-in-servicedef", "describe": "parametrize is used in test_servicedef.py (proof of the lesson's concept in real code)",
-      "run": "grep -c '@pytest.mark.parametrize' labs/checkpoints/v0.10/tests/test_servicedef.py",
-      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+    { "id": "m12-dd-coverage-100-percent-on-a-non-branching-function", "describe": "coverage.py reports 100% for a non-branching function exercised by an assertion-free test",
+      "run": "bash -c \"mkdir -p /tmp/m12dd && cat <<'PYEOF' > /tmp/m12dd/is_healthy.py\ndef is_healthy(status_code):\n    return status_code < 500\nPYEOF\ncat <<'PYEOF2' > /tmp/m12dd/test_is_healthy.py\nimport sys\nsys.path.insert(0, '/tmp/m12dd')\nfrom is_healthy import is_healthy\n\ndef test_is_healthy_runs_without_crashing():\n    is_healthy(200)\nPYEOF2\ncd labs/checkpoints/v1.0 && uv run --with coverage coverage run -m pytest /tmp/m12dd/test_is_healthy.py -q && uv run --with coverage coverage report -m --include='*is_healthy.py'\"",
+      "assert": { "contains": "100%" }, "weight": 3 },
 
-    { "id": "m12-dd-monkeypatch-used-not-mock-patch", "describe": "the test suite uses monkeypatch more than unittest.mock.patch (lesson recommendation)",
-      "run": "bash -c \"mp=$(grep -rl 'monkeypatch' labs/checkpoints/v0.10/tests/*.py 2>/dev/null | wc -l); up=$(grep -rl 'mock.patch' labs/checkpoints/v0.10/tests/*.py 2>/dev/null | wc -l); echo mp=$mp up=$up; [ $mp -ge $up ] && echo preferred || echo not-preferred\"",
-      "assert": { "contains": "preferred" }, "weight": 1 },
-
-    { "id": "m12-dd-fixture-scope-default-is-function", "describe": "fixtures without an explicit scope default to function-level (no leftover state between tests)",
-      "run": "python3 -c \"import ast; t=open('labs/checkpoints/v0.10/tests/test_local_ops.py').read(); tree=ast.parse(t); fixtures=[n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and any(isinstance(d,ast.Name) and d.id=='fixture' or isinstance(d,ast.Attribute) and d.attr=='fixture' for d in n.decorator_list if hasattr(n,'decorator_list'))]; print(len(fixtures),'fixtures found')\"",
-      "assert": { "matches": "\\d+ fixtures found" }, "weight": 1 }
+    { "id": "m12-dd-coverage-flags-the-untested-else-branch", "describe": "plain line coverage drops below 100% and names the untested else branch's line",
+      "run": "bash -c \"mkdir -p /tmp/m12dd && cat <<'PYEOF' > /tmp/m12dd/branchy.py\ndef classify_latency(latency_ms):\n    if latency_ms < 200:\n        return 'fast'\n    else:\n        return 'slow'\nPYEOF\ncat <<'PYEOF2' > /tmp/m12dd/test_branchy.py\nimport sys\nsys.path.insert(0, '/tmp/m12dd')\nfrom branchy import classify_latency\n\ndef test_classify_latency_labels_a_fast_response():\n    assert classify_latency(50) == 'fast'\nPYEOF2\ncd labs/checkpoints/v1.0 && uv run --with coverage coverage run -m pytest /tmp/m12dd/test_branchy.py -q && uv run --with coverage coverage report -m --include='*branchy.py'\"",
+      "assert": { "contains": "75%" }, "weight": 2 }
   ]
 }

@@ -8,8 +8,20 @@
       "run": "grep -c 'v1.0' labs/checkpoints/v1.0/README.md",
       "assert": { "matches": "^[1-9]" }, "weight": 1 },
 
+    { "id": "m12-checkpoint-pytest-cov-dev-dependency", "describe": "pytest-cov is now a dev dependency",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v1.0/pyproject.toml','rb')); deps=' '.join(d['dependency-groups']['dev']); print('present' if 'pytest-cov' in deps else 'missing')\"",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-pytest-cov-still-four-runtime-deps", "describe": "pytest-cov is a dev dependency only -- runtime dependency count is unchanged at four",
+      "run": "python3 -c \"import tomllib; d=tomllib.load(open('labs/checkpoints/v1.0/pyproject.toml','rb')); print(len(d['project']['dependencies']))\"",
+      "assert": { "matches": "^4$" }, "weight": 2 },
+
+    { "id": "m12-checkpoint-pytest-cov-runs-and-reports-total", "describe": "pytest --cov runs cleanly against the checkpoint and reports a TOTAL line",
+      "run": "cd labs/checkpoints/v1.0 && uv run pytest --cov=platformops --cov-report=term-missing -q 2>&1 | tail -25",
+      "assert": { "contains": "TOTAL" }, "weight": 3 },
+
     { "id": "m12-checkpoint-no-new-source-files", "describe": "no new source module was added -- this release only changes tests/",
-      "run": "bash -c \"diff <(ls labs/checkpoints/v0.9/src/platformops/) <(ls labs/checkpoints/v1.0/src/platformops/) | wc -l | tr -d ' '\"",
+      "run": "bash -c \"diff <(ls labs/checkpoints/v0.9/src/platformops/ | grep -v __pycache__) <(ls labs/checkpoints/v1.0/src/platformops/ | grep -v __pycache__) | wc -l | tr -d ' '\"",
       "assert": { "matches": "^0$" }, "weight": 2 },
 
     { "id": "m12-checkpoint-ruff-check", "describe": "ruff check passes",

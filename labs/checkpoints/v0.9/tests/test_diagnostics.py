@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 
@@ -128,14 +127,14 @@ def test_cli_with_no_argument_exits_2_the_usage_error_code(capsys):
     assert excinfo.value.code == 2
 
 
-def test_cli_verbose_shows_debug_detail_that_plain_run_does_not(tmp_path, caplog):
+def test_cli_verbose_shows_debug_detail_that_plain_run_does_not(tmp_path, capsys):
     good = tmp_path / "service.yaml"
     good.write_text(GOOD_YAML_TEXT)
 
-    with caplog.at_level(logging.DEBUG):
-        main([str(good), "--verbose"])
+    main([str(good), "--verbose"])
 
-    assert logging.getLogger().getEffectiveLevel() == logging.DEBUG
+    log_text = capsys.readouterr().err
+    assert "DEBUG" in log_text
 
 
 def test_debug_log_line_never_contains_a_field_value(tmp_path, capsys):
