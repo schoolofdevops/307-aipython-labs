@@ -1,0 +1,147 @@
+{
+  "checks": [
+    { "id": "m17-skill-dir-exists", "describe": "the .claude/skills/service-readiness-review/ directory exists in the live project",
+      "run": "test -d labs/platformops/.claude/skills/service-readiness-review && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m17-skill-file-exists", "describe": "SKILL.md exists inside the skill folder",
+      "run": "test -f labs/platformops/.claude/skills/service-readiness-review/SKILL.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m17-skill-name-field", "describe": "the skill's frontmatter names it service-readiness-review",
+      "run": "grep -c 'name: service-readiness-review' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-skill-trigger-phrase", "describe": "the description states an explicit when-to-use trigger",
+      "run": "grep -ci 'use this when' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-skill-references-service-glob", "describe": "the skill references service*.yaml files",
+      "run": "grep -c 'service\\*\\.yaml' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-skill-has-eight-sections", "describe": "the skill has all eight required body sections",
+      "run": "grep -c '^## ' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^8$" }, "weight": 2 },
+
+    { "id": "m17-skill-step-count-in-range", "describe": "the Steps section has between 4 and 8 numbered steps",
+      "run": "grep -cE '^[0-9]+\\. ' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[4-8]$" }, "weight": 3 },
+
+    { "id": "m17-skill-no-python-code", "describe": "the skill's steps do not reimplement validate_service() as inline Python",
+      "run": "grep -c '```python' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m17-skill-has-optional-extensions", "describe": "the skill has a clearly separated Optional extensions section",
+      "run": "grep -c '^## Optional extensions' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-skill-core-has-no-agent-name", "describe": "the required core (before Optional extensions) never names one coding agent",
+      "run": "awk '/^## Optional extensions/{exit} {print}' labs/platformops/.claude/skills/service-readiness-review/SKILL.md | grep -ci claude",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m17-skill-optional-extensions-has-agent-name", "describe": "the one agent-specific mention lives inside Optional extensions",
+      "run": "awk '/^## Optional extensions/{f=1} f' labs/platformops/.claude/skills/service-readiness-review/SKILL.md | grep -ci claude",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-skill-does-not-write-files", "describe": "the skill states it only reads and reports, never writes",
+      "run": "grep -ci 'only reads and reports' labs/platformops/.claude/skills/service-readiness-review/SKILL.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-test-service-cleaned-up", "describe": "Teardown: the throwaway test-service.yaml was removed from the live project",
+      "run": "test -f labs/platformops/test-service.yaml && echo still-present || echo cleaned",
+      "assert": { "contains": "cleaned" }, "weight": 2 },
+
+    { "id": "m17-version-bumped", "describe": "pyproject.toml is bumped to 1.2.1",
+      "run": "grep -c 'version = \"1.2.1\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m17-changelog-has-1-2-1-section", "describe": "CHANGELOG.md has a [1.2.1] release section",
+      "run": "grep -c '## \\[1.2.1\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-changelog-mentions-skill", "describe": "the [1.2.1] entry documents the new skill",
+      "run": "grep -c 'service-readiness-review' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-changelog-unreleased-reset", "describe": "the [Unreleased] section is empty again -- its prior entry moved into [1.2.1]",
+      "run": "sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' labs/platformops/CHANGELOG.md | sed '1d;$d' | tr -d '[:space:]' | wc -c | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m17-no-source-code-touched", "describe": "src/platformops/ is untouched by this module -- the skill lives in .claude/skills/, not the codebase",
+      "run": "cd labs/platformops && git status --porcelain src/platformops/ | wc -l | tr -d ' '",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m17-cli-still-works", "describe": "regression: the CLI still runs after this module's work",
+      "run": "cd labs/platformops && uv run platformops --help",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m17-tests-still-pass", "describe": "regression: the full test suite still passes at the new version",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m17-checkpoint-v1-2-regression-safe", "describe": "regression: the frozen v1.2 checkpoint this module started from still passes its own tests, untouched",
+      "run": "cd labs/checkpoints/v1.2 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 2 },
+
+    { "id": "m17-checkpoint-v1-2-1-has-skill", "describe": "the v1.2.1 checkpoint includes the service-readiness-review skill",
+      "run": "test -f labs/checkpoints/v1.2.1/.claude/skills/service-readiness-review/SKILL.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m17-checkpoint-v1-2-1-no-venv", "describe": "the v1.2.1 checkpoint was snapshotted without .venv, per the versioned-checkpoint hard rule",
+      "run": "test -d labs/checkpoints/v1.2.1/.venv && echo present || echo absent",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m17-checkpoint-v1-2-1-version", "describe": "the v1.2.1 checkpoint's pyproject.toml records the bumped version",
+      "run": "grep -c 'version = \"1.2.1\"' labs/checkpoints/v1.2.1/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-lesson-has-mermaid-diagram", "describe": "the lesson includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m17-designing-skill-md/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-lesson-covers-runbook-analogy", "describe": "the lesson uses the runbook analogy",
+      "run": "grep -ci 'runbook' site/docs/m17-designing-skill-md/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-lesson-covers-misfire-miss", "describe": "the lesson names the misfire/miss trigger-precision failure modes",
+      "run": "grep -ci 'misfire' site/docs/m17-designing-skill-md/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-lesson-has-common-pitfalls", "describe": "the lesson has a Common pitfalls section",
+      "run": "grep -ci 'common pitfalls' site/docs/m17-designing-skill-md/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-lab-has-two-phases", "describe": "lab.md has both Phase 1 and Phase 2",
+      "run": "grep -c '## Phase [12]' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^2$" }, "weight": 1 },
+
+    { "id": "m17-lab-references-labs-repo-checkpoint", "describe": "lab.md points a stuck learner at the frozen v1.2.1 checkpoint in the public labs clone, never the private src repo",
+      "run": "grep -c '307-aipython-labs/labs/checkpoints/v1.2.1' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-lab-has-teardown", "describe": "lab.md ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-lab-invokes-claude-explicitly", "describe": "lab.md has an explicit non-interactive Claude Code invocation of the skill",
+      "run": "grep -c 'claude -p' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-lab-invokes-codex-explicitly", "describe": "lab.md has an explicit non-interactive Codex invocation of the same skill file",
+      "run": "grep -c 'codex exec' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-lab-has-troubleshooting", "describe": "lab.md has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m17-designing-skill-md/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-quiz-question-count", "describe": "the quiz has at least 10 questions (course's 10-15 rule)",
+      "run": "grep -c 'prompt:' site/docs/m17-designing-skill-md/quiz.mdx",
+      "assert": { "matches": "^(1[0-5]|[1-9][0-9]+)$" }, "weight": 1 },
+
+    { "id": "m17-quiz-has-multiselect", "describe": "the quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m17-designing-skill-md/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 }
+  ]
+}

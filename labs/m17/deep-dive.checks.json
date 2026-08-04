@@ -1,0 +1,83 @@
+{
+  "checks": [
+    { "id": "m17-dd-file-exists", "describe": "deep-dive.md exists for M17",
+      "run": "test -f site/docs/m17-designing-skill-md/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m17-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-dd-has-where-this-picks-up", "describe": "deep dive has the state-tolerant Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c 'Use it when:' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m17-dd-no-unfilled-placeholders", "describe": "all expected output blocks have been folded with real captured output",
+      "run": "grep -c '<expected output — folded in during live lab validation>' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m17-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-dd-has-mermaid-diagram", "describe": "deep dive includes at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m17-dd-covers-word-count-measurement", "describe": "deep dive measures the trigger-to-body word-count ratio, the mechanism behind the lesson's precision claim",
+      "run": "grep -c 'wc -w' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-dd-covers-trigger-phrase-test", "describe": "deep dive runs a grep-based trigger-phrase test on the real skill's description",
+      "run": "grep -c 'use this when' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-dd-covers-step-granularity", "describe": "deep dive counts the real skill's numbered steps and checks them against the 4-8 range",
+      "run": "grep -ci 'granularity' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m17-dd-covers-agent-neutral-portability-check", "describe": "deep dive runs a real grep-based check confirming the required core has zero agent-specific mentions",
+      "run": "grep -c 'Optional extensions' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m17-dd-uses-scratch-copy-for-demonstrations", "describe": "all skill-file demonstrations run in a scratch copy, not the real project",
+      "run": "grep -c '/tmp/m17-dd-scratch' site/docs/m17-designing-skill-md/deep-dive.md",
+      "assert": { "matches": "^[5-9]|^[1-9][0-9]" }, "weight": 1 },
+
+    { "id": "m17-dd-scratch-not-left-behind", "describe": "teardown removed the scratch copy -- no leftover state on the shared runner",
+      "run": "test -d /tmp/m17-dd-scratch && echo present || echo absent",
+      "assert": { "contains": "absent" }, "weight": 1 },
+
+    { "id": "m17-dd-real-project-version-is-1-2-1", "describe": "the real project's version is already 1.2.1 -- the lab's version bump happened before this deep dive runs",
+      "run": "grep -c 'version = \"1.2.1\"' labs/platformops/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m17-dd-real-project-skill-present", "describe": "the real project already has the service-readiness-review skill from the lab",
+      "run": "test -f labs/platformops/.claude/skills/service-readiness-review/SKILL.md && echo present || echo absent",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m17-dd-real-project-changelog-has-1-2-1", "describe": "the real project's CHANGELOG.md already records the 1.2.1 release",
+      "run": "grep -c '## \\[1.2.1\\]' labs/platformops/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m17-dd-real-project-still-passes-tests", "describe": "the real project's test suite still passes -- nothing on this page touched it",
+      "run": "cd labs/platformops && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 3 },
+
+    { "id": "m17-dd-catalogue-still-intact", "describe": "the real project's skills/CATALOGUE.md from Module 16 is untouched by this deep dive",
+      "run": "grep -c '^| \\`' labs/platformops/skills/CATALOGUE.md",
+      "assert": { "matches": "^5$" }, "weight": 1 }
+  ]
+}
