@@ -1,0 +1,63 @@
+{
+  "checks": [
+    { "id": "m22-dd-file-exists", "describe": "deep-dive.md exists for M22",
+      "run": "test -f site/docs/m22-local-aws-floci/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m22-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m22-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m22-dd-covers-iam-not-enforced", "describe": "deep dive proves, live, that Floci accepts an IAM Deny policy but does not enforce it",
+      "run": "grep -c 'not enforced\\|does not enforce\\|not blocked' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m22-dd-iam-demo-shows-put-succeeded", "describe": "the IAM demo's captured output shows the denied put still succeeding",
+      "run": "grep -c 'SUCCEEDED (not blocked)' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m22-dd-covers-endpoint-url-grep-proof", "describe": "deep dive proves the client-factory design with an actual grep command against the real modules",
+      "run": "grep -c 'grep -n .endpoint_url' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m22-dd-covers-findingsstore-zero-callsites", "describe": "deep dive explains findingsstore.py has zero real get_aws_client() call sites (dependency injection instead)",
+      "run": "grep -c 'zero.*call sites\\|dependency-injection' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m22-dd-covers-dlq-redrive-policy-json", "describe": "deep dive shows the real RedrivePolicy JSON captured live",
+      "run": "grep -c 'deadLetterTargetArn' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m22-dd-covers-receive-count-progression", "describe": "deep dive traces ApproximateReceiveCount climbing 1 then 2 before the DLQ redirect",
+      "run": "grep -c 'ApproximateReceiveCount=1' site/docs/m22-local-aws-floci/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m22-dd-no-real-secrets", "describe": "deep dive uses only fake Floci credentials, never a real-looking AWS access key",
+      "run": "grep -oE 'AKIA[0-9A-Z]{10,}' site/docs/m22-local-aws-floci/deep-dive.md; true",
+      "assert": { "matches": "^$" }, "weight": 3 },
+
+    { "id": "m22-dd-iam-demo-runs-live", "describe": "the deep dive's IAM demo script actually runs against a live Floci and reproduces the documented output",
+      "run": "cd labs/checkpoints/v1.7.0 && AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_ENDPOINT_URL=http://localhost:4566 uv run python -c \"import json, boto3; iam = boto3.client('iam', region_name='us-east-1'); s3 = boto3.client('s3', region_name='us-east-1'); s3.create_bucket(Bucket='dd-check-bucket'); iam.create_user(UserName='dd-check-user'); iam.put_user_policy(UserName='dd-check-user', PolicyName='deny-put', PolicyDocument=json.dumps({'Version': '2012-10-17', 'Statement': [{'Effect': 'Deny', 'Action': 's3:PutObject', 'Resource': '*'}]})); s3.put_object(Bucket='dd-check-bucket', Key='t.txt', Body=b'x'); print('SUCCEEDED (not blocked)'); s3.delete_object(Bucket='dd-check-bucket', Key='t.txt'); s3.delete_bucket(Bucket='dd-check-bucket'); iam.delete_user_policy(UserName='dd-check-user', PolicyName='deny-put'); iam.delete_user(UserName='dd-check-user')\"",
+      "assert": { "contains": "SUCCEEDED (not blocked)" }, "weight": 5 }
+  ]
+}

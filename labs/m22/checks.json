@@ -1,0 +1,167 @@
+{
+  "checks": [
+    { "id": "m22-awsclient-exists", "describe": "awsclient.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.7.0/src/platformops/awsclient.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m22-has-get-aws-client", "describe": "get_aws_client() is defined",
+      "run": "grep -c 'def get_aws_client(' labs/checkpoints/v1.7.0/src/platformops/awsclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-awsclient-defaults-endpoint-to-none", "describe": "endpoint_url defaults to None -- talks to real AWS unless overridden",
+      "run": "grep -c 'endpoint_url: str | None = None' labs/checkpoints/v1.7.0/src/platformops/awsclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-awsclient-reads-env-var-fallback", "describe": "AWS_ENDPOINT_URL is read as a fallback, not the primary source",
+      "run": "grep -c \"os.environ.get(.AWS_ENDPOINT_URL.)\" labs/checkpoints/v1.7.0/src/platformops/awsclient.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m22-awsclient-has-retry-config", "describe": "an explicit botocore retry Config is set, matching cloudinventory's pattern",
+      "run": "grep -c 'Config(retries=' labs/checkpoints/v1.7.0/src/platformops/awsclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-no-hardcoded-endpoint-url-literal", "describe": "endpoint_url=\"http://...\" appears exactly once, and only as a docstring sentence describing the rule -- never as a real keyword argument (see Deep Dive Section 2)",
+      "run": "grep -rc 'endpoint_url=\"http' labs/checkpoints/v1.7.0/src/platformops/reportstore.py labs/checkpoints/v1.7.0/src/platformops/findingsstore.py labs/checkpoints/v1.7.0/src/platformops/workqueue.py | awk -F: '{sum+=$2} END {print sum}'",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m22-no-direct-boto3-client-calls", "describe": "boto3.client( appears only in docstring sentences (reportstore.py + findingsstore.py) -- never as a real call (see Deep Dive Section 2)",
+      "run": "grep -rc 'boto3\\.client(' labs/checkpoints/v1.7.0/src/platformops/reportstore.py labs/checkpoints/v1.7.0/src/platformops/findingsstore.py labs/checkpoints/v1.7.0/src/platformops/workqueue.py | awk -F: '{sum+=$2} END {print sum}'",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m22-reportstore-exists", "describe": "reportstore.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.7.0/src/platformops/reportstore.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m22-reportstore-has-core-functions", "describe": "reportstore.py defines ensure_bucket, upload_report, download_report, list_reports",
+      "run": "grep -c '^def \\(ensure_bucket\\|upload_report\\|download_report\\|list_reports\\)(' labs/checkpoints/v1.7.0/src/platformops/reportstore.py",
+      "assert": { "matches": "^4$" }, "weight": 3 },
+
+    { "id": "m22-reportstore-uploads-are-timestamped", "describe": "upload_report() builds a timestamped key, avoiding collisions",
+      "run": "grep -c 'strftime' labs/checkpoints/v1.7.0/src/platformops/reportstore.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-reportstore-list-uses-paginator", "describe": "list_reports() and empty_bucket() both walk every page via a paginator, not a single unpaginated call",
+      "run": "grep -c 'get_paginator(\"list_objects_v2\")' labs/checkpoints/v1.7.0/src/platformops/reportstore.py",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m22-reportstore-has-cli-wrapper", "describe": "upload_report_to_bucket() is the CLI-facing wrapper",
+      "run": "grep -c 'def upload_report_to_bucket(' labs/checkpoints/v1.7.0/src/platformops/reportstore.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-findingsstore-exists", "describe": "findingsstore.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.7.0/src/platformops/findingsstore.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m22-findingsstore-has-core-functions", "describe": "findingsstore.py defines ensure_table, put_finding, get_finding, query_findings",
+      "run": "grep -c '^def \\(ensure_table\\|put_finding\\|get_finding\\|query_findings\\)(' labs/checkpoints/v1.7.0/src/platformops/findingsstore.py",
+      "assert": { "matches": "^4$" }, "weight": 3 },
+
+    { "id": "m22-findingsstore-uses-composite-key", "describe": "the table uses a composite key -- both HASH and RANGE key types",
+      "run": "grep -c '\"KeyType\": \"HASH\"\\|\"KeyType\": \"RANGE\"' labs/checkpoints/v1.7.0/src/platformops/findingsstore.py",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m22-findingsstore-query-sorts-server-side", "describe": "query_findings() uses ScanIndexForward, not a Python-side sort",
+      "run": "grep -c 'ScanIndexForward' labs/checkpoints/v1.7.0/src/platformops/findingsstore.py",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m22-workqueue-exists", "describe": "workqueue.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.7.0/src/platformops/workqueue.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m22-workqueue-has-core-functions", "describe": "workqueue.py defines ensure_queue, ensure_dead_letter_queue, send_message, receive_messages, delete_message",
+      "run": "grep -c '^def \\(ensure_queue\\|ensure_dead_letter_queue\\|send_message\\|receive_messages\\|delete_message\\)(' labs/checkpoints/v1.7.0/src/platformops/workqueue.py",
+      "assert": { "matches": "^5$" }, "weight": 3 },
+
+    { "id": "m22-workqueue-wires-redrive-policy", "describe": "ensure_queue() sets a real RedrivePolicy with deadLetterTargetArn and maxReceiveCount",
+      "run": "grep -c 'deadLetterTargetArn' labs/checkpoints/v1.7.0/src/platformops/workqueue.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m22-workqueue-tracks-receive-count", "describe": "receive_messages() surfaces ApproximateReceiveCount",
+      "run": "grep -c 'ApproximateReceiveCount' labs/checkpoints/v1.7.0/src/platformops/workqueue.py",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m22-workqueue-has-cli-wrappers", "describe": "send_to_queue() and receive_from_queue() are the CLI-facing wrappers",
+      "run": "grep -c '^def \\(send_to_queue\\|receive_from_queue\\)(' labs/checkpoints/v1.7.0/src/platformops/workqueue.py",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m22-cli-has-report-upload", "describe": "the CLI wires a report-upload command",
+      "run": "grep -c '@app.command(\"report-upload\")' labs/checkpoints/v1.7.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-cli-has-queue-send", "describe": "the CLI wires a queue-send command",
+      "run": "grep -c '@app.command(\"queue-send\")' labs/checkpoints/v1.7.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-cli-has-queue-receive", "describe": "the CLI wires a queue-receive command",
+      "run": "grep -c '@app.command(\"queue-receive\")' labs/checkpoints/v1.7.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-tests-exist", "describe": "all four new test files exist in the checkpoint",
+      "run": "for f in test_awsclient test_reportstore test_findingsstore test_workqueue; do test -f labs/checkpoints/v1.7.0/tests/$f.py || echo missing-$f; done; echo done",
+      "assert": { "contains": "done" }, "weight": 2 },
+
+    { "id": "m22-conftest-skips-cleanly-without-floci", "describe": "conftest.py's require_floci fixture calls pytest.skip, not a hard failure",
+      "run": "grep -c 'pytest.skip' labs/checkpoints/v1.7.0/tests/conftest.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m22-full-suite-passes", "describe": "the full test suite passes against the checkpoint (requires Floci running)",
+      "run": "cd labs/checkpoints/v1.7.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 5 },
+
+    { "id": "m22-new-module-tests-pass", "describe": "the four new test files pass together, 31 tests",
+      "run": "cd labs/checkpoints/v1.7.0 && uv run pytest tests/test_awsclient.py tests/test_reportstore.py tests/test_findingsstore.py tests/test_workqueue.py -q 2>&1 | tail -1",
+      "assert": { "contains": "31 passed" }, "weight": 5 },
+
+    { "id": "m22-ruff-clean", "describe": "ruff check passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.7.0 && uv run ruff check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "All checks passed" }, "weight": 3 },
+
+    { "id": "m22-mypy-clean", "describe": "mypy passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.7.0 && uv run mypy src/ 2>&1 | tail -1",
+      "assert": { "contains": "Success" }, "weight": 3 },
+
+    { "id": "m22-cli-version-reports-1.7.0", "describe": "the CLI reports version 1.7.0",
+      "run": "cd labs/checkpoints/v1.7.0 && uv run platformops version",
+      "assert": { "contains": "platformops 1.7.0" }, "weight": 2 },
+
+    { "id": "m22-changelog-has-entry", "describe": "CHANGELOG.md has a 1.7.0 entry",
+      "run": "grep -c '## \\[1.7.0\\]' labs/checkpoints/v1.7.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-lesson-exists", "describe": "lesson.md exists and is authored (not the scaffold stub)",
+      "run": "grep -c 'Scaffolded' site/docs/m22-local-aws-floci/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m22-lesson-has-mermaid", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m22-local-aws-floci/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m22-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m22-local-aws-floci/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m22-lesson-warns-about-floci-stop", "describe": "lesson explains floci stop removes the container",
+      "run": "grep -ci 'floci stop' site/docs/m22-local-aws-floci/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m22-lab-has-teardown", "describe": "lab ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m22-local-aws-floci/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m22-lab-has-troubleshooting", "describe": "lab has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m22-local-aws-floci/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m22-lab-teardown-does-not-instruct-floci-stop", "describe": "the lab's Teardown never tells the learner to run floci stop",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m22-local-aws-floci/lab.md | grep -c '^floci stop'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m22-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m22-local-aws-floci/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m22-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m22-local-aws-floci/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}
