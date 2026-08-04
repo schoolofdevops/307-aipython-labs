@@ -1,0 +1,59 @@
+{
+  "checks": [
+    { "id": "m21-dd-file-exists", "describe": "deep-dive.md exists for M21",
+      "run": "test -f site/docs/m21-boto3-fundamentals/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m21-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m21-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m21-dd-covers-credential-chain", "describe": "deep dive covers the credential chain traced concretely",
+      "run": "grep -c 'credential chain, traced concretely' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-dd-covers-pagination-proof", "describe": "deep dive proves pagination with a page-count demonstration",
+      "run": "grep -c 'total pages fetched' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m21-dd-covers-retry-policy", "describe": "deep dive grounds the retry/no-retry split in botocore's own retry policy data",
+      "run": "grep -c '_retry.json' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m21-dd-mentions-invalid-instance-id-not-retried", "describe": "deep dive explicitly names the non-retryable ClientError case",
+      "run": "grep -c 'InvalidInstanceID.NotFound' site/docs/m21-boto3-fundamentals/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m21-dd-no-real-secrets", "describe": "deep dive's credential demo uses only fake keys, never a real-looking secret without FAKE in it",
+      "run": "grep -oE 'AKIA[0-9A-Z]{10,}' site/docs/m21-boto3-fundamentals/deep-dive.md | grep -vc 'FAKE'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-dd-no-floci-mention", "describe": "deep dive never mentions Floci or endpoint_url -- that is Module 22's subject",
+      "run": "grep -ci 'floci\\|endpoint_url' site/docs/m21-boto3-fundamentals/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-dd-retry-policy-command-runs", "describe": "the deep dive's retry-policy inspection command runs and lists botocore's real retryable rules",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run python -c \"import json, botocore, os; path = os.path.join(os.path.dirname(botocore.__file__), 'data', '_retry.json'); data = json.load(open(path)); print('throttling' in data['definitions'])\"",
+      "assert": { "contains": "True" }, "weight": 3 }
+  ]
+}

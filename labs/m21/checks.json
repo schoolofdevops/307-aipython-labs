@@ -1,0 +1,187 @@
+{
+  "checks": [
+    { "id": "m21-module-exists", "describe": "cloudinventory.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m21-module-imports-boto3", "describe": "the module imports boto3",
+      "run": "grep -c '^import boto3' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-module-imports-botocore-exceptions", "describe": "the module imports botocore.exceptions by name",
+      "run": "grep -c '^import botocore.exceptions' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-has-get-client", "describe": "get_client() is defined",
+      "run": "grep -c 'def get_client(' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-get-client-uses-session-profile-name", "describe": "get_client() builds a Session with profile_name -- the credential chain, never a hardcoded key",
+      "run": "grep -c 'boto3.Session(profile_name=profile)' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-no-hardcoded-access-key", "describe": "no literal AWS access key id pattern anywhere in the module",
+      "run": "grep -cE 'AKIA[0-9A-Z]{16}' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-has-list-instances", "describe": "list_instances() is defined",
+      "run": "grep -c 'def list_instances(' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-list-instances-uses-paginator", "describe": "list_instances() uses get_paginator, never a single unpaginated describe_instances call",
+      "run": "grep -c 'paginator = client.get_paginator(\"describe_instances\")' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-list-instances-supports-page-size", "describe": "list_instances() exposes a page_size option so pagination is provable in a test",
+      "run": "grep -c 'page_size' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m21-uses-server-side-filters", "describe": "tag filtering uses the AWS Filters parameter, not client-side filtering",
+      "run": "grep -c 'paginate_kwargs\\[\"Filters\"\\]' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-tag-filter-uses-tag-colon-syntax", "describe": "the tag:key=value filter name is built correctly",
+      "run": "grep -c 'tag:{tag_key}' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-has-scan-inventory", "describe": "scan_inventory() is defined",
+      "run": "grep -c 'def scan_inventory(' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-region-has-no-default-in-scan-inventory", "describe": "region is a required keyword argument with no default in scan_inventory()",
+      "run": "grep -A6 'def scan_inventory(' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py | grep -c '^    region: str,$'",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-catches-no-credentials-error-by-name", "describe": "scan_inventory() catches NoCredentialsError by name",
+      "run": "grep -c 'except botocore.exceptions.NoCredentialsError as exc' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-catches-client-error-by-name", "describe": "scan_inventory() catches ClientError by name",
+      "run": "grep -c 'except botocore.exceptions.ClientError as exc' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-no-bare-except", "describe": "no bare except Exception: anywhere in the module's actual code (docstring prose mentioning it is fine)",
+      "run": "grep -c 'except Exception:' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-has-explicit-retry-config", "describe": "an explicit botocore retry Config is set",
+      "run": "grep -c 'Config(retries=' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-report-is-json-safe-dict", "describe": "scan_inventory() builds its report with asdict(), not raw dataclasses (which json.dumps cannot serialize)",
+      "run": "grep -c 'asdict(record)' labs/checkpoints/v1.6.0/src/platformops/cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-tests-exist", "describe": "tests/test_cloudinventory.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.6.0/tests/test_cloudinventory.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m21-tests-use-mock-aws", "describe": "the tests use moto's mock_aws decorator",
+      "run": "grep -c '@mock_aws' labs/checkpoints/v1.6.0/tests/test_cloudinventory.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m21-tests-cover-pagination", "describe": "a test proves multi-page pagination is walked, not just the first page",
+      "run": "grep -c 'def test_list_instances_walks_every_page_not_just_the_first' labs/checkpoints/v1.6.0/tests/test_cloudinventory.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-tests-cover-no-credentials-outside-mock", "describe": "the NoCredentialsError test is not decorated with @mock_aws (moto fakes credentials while active)",
+      "run": "grep -B1 'def test_scan_inventory_catches_missing_credentials' labs/checkpoints/v1.6.0/tests/test_cloudinventory.py | grep -c '@mock_aws'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-cli-command-exists", "describe": "the inventory-scan CLI command is wired up",
+      "run": "grep -c 'inventory-scan' labs/checkpoints/v1.6.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m21-cli-imports-scan-inventory", "describe": "cli.py imports scan_inventory from the tested package",
+      "run": "grep -c 'from platformops.cloudinventory import scan_inventory' labs/checkpoints/v1.6.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m21-cli-region-required", "describe": "the CLI's --region option has no default (typer.Option with no trailing = default)",
+      "run": "grep -c 'typer.Option(\"--region\"' labs/checkpoints/v1.6.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-cli-tag-value-requires-tag-key", "describe": "the CLI validates --tag-value requires --tag-key before calling scan_inventory",
+      "run": "grep -c -- '--tag-value requires --tag-key' labs/checkpoints/v1.6.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-pyproject-has-boto3-dependency", "describe": "boto3 is a runtime dependency",
+      "run": "grep -c 'boto3' labs/checkpoints/v1.6.0/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m21-pyproject-has-moto-dev-dependency", "describe": "moto[ec2] is a dev dependency",
+      "run": "grep -c 'moto\\[ec2\\]' labs/checkpoints/v1.6.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-mypy-override-for-boto3", "describe": "a mypy override ignores missing stubs for boto3/botocore",
+      "run": "grep -c 'boto3\", \"botocore' labs/checkpoints/v1.6.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m21-version-bumped", "describe": "pyproject.toml version is 1.6.0",
+      "run": "grep -c 'version = \"1.6.0\"' labs/checkpoints/v1.6.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-changelog-has-entry", "describe": "CHANGELOG.md has the v1.6.0 entry",
+      "run": "grep -c '\\[1.6.0\\] - AWS Resource Inventory' labs/checkpoints/v1.6.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-full-suite-passes", "describe": "the full test suite passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 5 },
+
+    { "id": "m21-cloudinventory-tests-pass", "describe": "test_cloudinventory.py passes on its own, 11 tests",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run pytest tests/test_cloudinventory.py -q 2>&1 | tail -1",
+      "assert": { "contains": "11 passed" }, "weight": 5 },
+
+    { "id": "m21-ruff-clean", "describe": "ruff check passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run ruff check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "All checks passed" }, "weight": 3 },
+
+    { "id": "m21-mypy-clean", "describe": "mypy passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run mypy src/ 2>&1 | tail -1",
+      "assert": { "contains": "Success" }, "weight": 3 },
+
+    { "id": "m21-cli-help-shows-required-region", "describe": "the CLI help output marks --region as required",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run platformops inventory-scan --help 2>&1 | grep -c 'required'",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m21-cli-version-reports-1.6.0", "describe": "the CLI reports version 1.6.0",
+      "run": "cd labs/checkpoints/v1.6.0 && uv run platformops version",
+      "assert": { "contains": "platformops 1.6.0" }, "weight": 2 },
+
+    { "id": "m21-lesson-exists", "describe": "lesson.md exists and is authored (not the scaffold stub)",
+      "run": "grep -c 'Scaffolded' site/docs/m21-boto3-fundamentals/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m21-lesson-has-mermaid", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m21-boto3-fundamentals/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m21-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m21-boto3-fundamentals/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m21-lesson-no-floci-mention", "describe": "the lesson never mentions Floci or endpoint_url -- that is Module 22's subject",
+      "run": "grep -ci 'floci\\|endpoint_url' site/docs/m21-boto3-fundamentals/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-lab-no-floci-mention", "describe": "the lab never mentions Floci or points boto3 at endpoint_url -- that is Module 22's subject",
+      "run": "grep -ci 'floci\\|endpoint_url' site/docs/m21-boto3-fundamentals/lab.md; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m21-lab-has-teardown", "describe": "lab ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m21-boto3-fundamentals/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m21-lab-has-troubleshooting", "describe": "lab has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m21-boto3-fundamentals/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m21-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m21-boto3-fundamentals/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m21-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m21-boto3-fundamentals/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}
