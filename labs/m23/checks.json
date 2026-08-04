@@ -1,0 +1,251 @@
+{
+  "checks": [
+    { "id": "m23-module-exists", "describe": "multiregion.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.8.0/src/platformops/multiregion.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m23-has-resource-record", "describe": "ResourceRecord dataclass is defined",
+      "run": "grep -c 'class ResourceRecord' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-tags-helper-handles-missing-and-empty", "describe": "_tags_from_ec2_list normalizes both a missing Tags key and an empty list",
+      "run": "grep -c 'def _tags_from_ec2_list' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-has-list-ec2-instances", "describe": "list_ec2_instances() is defined",
+      "run": "grep -c 'def list_ec2_instances(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-ec2-uses-paginator", "describe": "list_ec2_instances() uses get_paginator, never a single unpaginated describe_instances call (the exact bug the Phase 2 diff seeded)",
+      "run": "grep -c 'client.get_paginator(\"describe_instances\")' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m23-ec2-no-raw-unpaginated-call", "describe": "list_ec2_instances() never calls describe_instances() directly without a paginator",
+      "run": "grep -c 'client.describe_instances(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m23-has-list-ebs-volumes", "describe": "list_ebs_volumes() is defined",
+      "run": "grep -c 'def list_ebs_volumes(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-ebs-uses-paginator", "describe": "list_ebs_volumes() uses get_paginator",
+      "run": "grep -c 'client.get_paginator(\"describe_volumes\")' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-has-list-security-groups", "describe": "list_security_groups() is defined",
+      "run": "grep -c 'def list_security_groups(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-sg-uses-paginator", "describe": "list_security_groups() uses get_paginator",
+      "run": "grep -c 'client.get_paginator(\"describe_security_groups\")' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-sg-state-is-none", "describe": "security groups report state=None -- no natural state for this resource type",
+      "run": "grep -c 'state=None,' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-has-list-elastic-ips", "describe": "list_elastic_ips() is defined",
+      "run": "grep -c 'def list_elastic_ips(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-eip-uses-direct-call-not-paginator", "describe": "list_elastic_ips() calls describe_addresses() directly -- no paginator exists for this operation",
+      "run": "grep -c 'client.describe_addresses()' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-has-list-s3-buckets", "describe": "list_s3_buckets() is defined",
+      "run": "grep -c 'def list_s3_buckets(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-s3-uses-list-buckets-once", "describe": "list_s3_buckets() calls list_buckets() -- the one account-wide call",
+      "run": "grep -c 'client.list_buckets()' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-s3-resolves-bucket-region-separately", "describe": "each bucket's real region is resolved with a separate get_bucket_location() call",
+      "run": "grep -c 'def _bucket_region(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-s3-handles-no-such-tag-set", "describe": "an untagged bucket's NoSuchTagSet is caught by name, not left to crash the scan",
+      "run": "grep -c 'NoSuchTagSet' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-has-scan-region", "describe": "scan_region() (single region) is defined",
+      "run": "grep -c 'def scan_region(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-scan-region-excludes-s3", "describe": "scan_region() combines EC2/EBS/SG/EIP but not S3 (S3 is account-wide, handled separately)",
+      "run": "grep -A10 'def scan_region(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py | grep -c 'list_s3_buckets'; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m23-has-scan-regions", "describe": "scan_regions() (multi-region) is defined",
+      "run": "grep -c 'def scan_regions(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-uses-bounded-thread-pool-executor", "describe": "scan_regions() uses ThreadPoolExecutor, never a raw threading.Thread per region (the exact bug the Phase 2 diff seeded)",
+      "run": "grep -c 'ThreadPoolExecutor(max_workers=max_workers)' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m23-no-raw-threading-thread-spawn", "describe": "no raw threading.Thread(...) construction anywhere in the module (would indicate the unbounded-concurrency bug survived)",
+      "run": "grep -c 'threading.Thread(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m23-max-workers-has-default", "describe": "max_workers is a configurable parameter with a small default",
+      "run": "grep -c 'max_workers: int = DEFAULT_MAX_WORKERS' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-default-max-workers-is-small", "describe": "DEFAULT_MAX_WORKERS is a small, bounded number (1-10), never unbounded",
+      "run": "grep -oE 'DEFAULT_MAX_WORKERS = [0-9]+' labs/checkpoints/v1.8.0/src/platformops/multiregion.py | grep -oE '[0-9]+$'",
+      "assert": { "matches": "^[1-9]$" }, "weight": 2 },
+
+    { "id": "m23-catches-expired-token-distinctly", "describe": "expired-token error codes are classified into their own distinct reason",
+      "run": "grep -c 'EXPIRED_TOKEN_CODES' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-expired-token-codes-are-real", "describe": "EXPIRED_TOKEN_CODES names the real AWS error codes for an expired session token",
+      "run": "grep -c 'ExpiredToken' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-failed-regions-does-not-abort-scan", "describe": "a failed region contributes to failed_regions, never a raised, uncaught exception",
+      "run": "grep -c 'failed_regions' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-status-partial-on-any-failure", "describe": "status is partial the moment any region fails, ok only when every region succeeded",
+      "run": "grep -c '\"partial\"' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-no-bare-except", "describe": "no bare except Exception: anywhere in the module's actual code",
+      "run": "grep -c 'except Exception:' labs/checkpoints/v1.8.0/src/platformops/multiregion.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m23-has-to-markdown", "describe": "to_markdown() formatter is defined",
+      "run": "grep -c 'def to_markdown(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-has-to-csv", "describe": "to_csv() formatter is defined",
+      "run": "grep -c 'def to_csv(' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-uses-get-aws-client", "describe": "the module builds clients through get_aws_client(), not a hand-rolled boto3.client() call",
+      "run": "grep -c 'from platformops.awsclient import get_aws_client' labs/checkpoints/v1.8.0/src/platformops/multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-no-endpoint-url-wired", "describe": "this module never passes an endpoint_url= override or reads AWS_ENDPOINT_URL -- it always talks to real AWS (mocked by moto in tests)",
+      "run": "grep -c 'endpoint_url=\\|AWS_ENDPOINT_URL' labs/checkpoints/v1.8.0/src/platformops/multiregion.py; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m23-tests-exist", "describe": "tests/test_multiregion.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.8.0/tests/test_multiregion.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m23-tests-cover-pagination-completeness", "describe": "a test proves multi-page pagination is walked across the whole scan, not just the first page",
+      "run": "grep -c 'def test_scan_regions_pagination_completeness_across_the_whole_scan' labs/checkpoints/v1.8.0/tests/test_multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-tests-cover-bounded-concurrency", "describe": "a test proves max_workers is actually capped, not just documented as capped",
+      "run": "grep -c 'def test_scan_regions_never_exceeds_max_workers_concurrent_scans' labs/checkpoints/v1.8.0/tests/test_multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-tests-cover-expired-token", "describe": "a test proves an expired token is reported distinctly from other ClientErrors",
+      "run": "grep -c 'def test_scan_regions_reports_an_expired_token_distinctly_from_other_client_errors' labs/checkpoints/v1.8.0/tests/test_multiregion.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m23-tests-cover-missing-tags", "describe": "a test proves missing/empty EC2-style tags AND an untagged S3 bucket both normalize cleanly",
+      "run": "grep -c 'def test_tags_from_ec2_list_handles_missing_key_and_empty_list_and_real_tags\\|def test_list_s3_buckets_handles_an_untagged_bucket_without_crashing' labs/checkpoints/v1.8.0/tests/test_multiregion.py",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m23-cli-command-exists", "describe": "the multi-region-scan CLI command is wired up",
+      "run": "grep -c 'multi-region-scan' labs/checkpoints/v1.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-cli-imports-scan-regions", "describe": "cli.py imports scan_regions from the tested package",
+      "run": "grep -c 'scan_regions' labs/checkpoints/v1.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-cli-has-max-workers-option", "describe": "the CLI exposes --max-workers",
+      "run": "grep -c -- '--max-workers' labs/checkpoints/v1.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-cli-has-format-option", "describe": "the CLI exposes --format for markdown/csv",
+      "run": "grep -c -- '--format' labs/checkpoints/v1.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-version-bumped", "describe": "pyproject.toml version is 1.8.0",
+      "run": "grep -c 'version = \"1.8.0\"' labs/checkpoints/v1.8.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-changelog-has-entry", "describe": "CHANGELOG.md has the v1.8.0 entry",
+      "run": "grep -c '\\[1.8.0\\] - Multi-Region Cloud Inventory' labs/checkpoints/v1.8.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-full-suite-passes", "describe": "the full test suite passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 5 },
+
+    { "id": "m23-multiregion-tests-pass", "describe": "test_multiregion.py passes on its own, 23 tests",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run pytest tests/test_multiregion.py -q 2>&1 | tail -1",
+      "assert": { "contains": "23 passed" }, "weight": 5 },
+
+    { "id": "m23-ruff-clean", "describe": "ruff check passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run ruff check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "All checks passed" }, "weight": 3 },
+
+    { "id": "m23-mypy-clean", "describe": "mypy passes against the checkpoint",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run mypy src/ 2>&1 | tail -1",
+      "assert": { "contains": "Success" }, "weight": 3 },
+
+    { "id": "m23-cli-version-reports-1.8.0", "describe": "the CLI reports version 1.8.0",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run platformops version",
+      "assert": { "contains": "platformops 1.8.0" }, "weight": 2 },
+
+    { "id": "m23-lab-assets-present", "describe": "the rigged diff, review template and checks all exist",
+      "run": "ls labs/m23/rigged-diff.patch labs/m23/review-template.md labs/m23/checks.json",
+      "assert": { "exit": 0 }, "weight": 2 },
+
+    { "id": "m23-diff-touches-one-file", "describe": "the rigged diff touches exactly multiregion.py",
+      "run": "grep -c '^diff --git' labs/m23/rigged-diff.patch",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m23-diff-flaw-unbounded-concurrency", "describe": "the rigged diff introduces a raw threading.Thread spawn per region",
+      "run": "grep -c 'threading.Thread(' labs/m23/rigged-diff.patch",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-diff-flaw-pagination", "describe": "the rigged diff's list_ec2_instances loses its paginator (a raw describe_instances call appears)",
+      "run": "grep -c 'client.describe_instances(' labs/m23/rigged-diff.patch",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-review-template-has-two-rows", "describe": "review-template.md has exactly two empty findings rows",
+      "run": "grep -c '^| [1-2] |' labs/m23/review-template.md",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m23-review-template-names-both-categories", "describe": "review-template.md names both flaw categories",
+      "run": "grep -c -E 'unbounded-concurrency|pagination-bug' labs/m23/review-template.md",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m23-lesson-exists", "describe": "lesson.md exists and is authored (not the scaffold stub)",
+      "run": "grep -c 'Scaffolded' site/docs/m23-multi-region-inventory/lesson.md; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m23-lesson-has-mermaid", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m23-multi-region-inventory/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 1 },
+
+    { "id": "m23-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m23-multi-region-inventory/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-lab-has-teardown", "describe": "lab ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m23-multi-region-inventory/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m23-lab-has-troubleshooting", "describe": "lab has a Troubleshooting admonition",
+      "run": "grep -c ':::warning\\[Troubleshooting\\]' site/docs/m23-multi-region-inventory/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m23-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m23-multi-region-inventory/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m23-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m23-multi-region-inventory/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

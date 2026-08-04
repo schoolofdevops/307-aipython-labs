@@ -1,0 +1,63 @@
+{
+  "checks": [
+    { "id": "m23-dd-file-exists", "describe": "deep-dive.md exists for M23",
+      "run": "test -f site/docs/m23-multi-region-inventory/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m23-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-dd-has-where-you-will-use-this", "describe": "deep dive closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-dd-use-it-when-bullets-present", "describe": "closing bullets each end with a real-work Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m23-dd-has-teardown", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 1 },
+
+    { "id": "m23-dd-covers-s3-shape-difference", "describe": "deep dive covers why S3 discovery is structurally different",
+      "run": "grep -c 'S3 discovery is structurally different' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m23-dd-s3-shape-live-proof", "describe": "the S3-shape section shows real captured output naming both buckets and both regions",
+      "run": "grep -c 'bucket-in-east.*bucket-in-west\\|bucket-in-west.*bucket-in-east' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-dd-covers-pagination-proof", "describe": "deep dive proves the pagination fix with a buggy-vs-fixed side by side count",
+      "run": "grep -c 'walks every page' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-dd-pagination-proof-shows-both-counts", "describe": "the pagination proof shows both the buggy (5) and fixed (12) counts from the same fixture",
+      "run": "grep -c '5 returned' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-dd-covers-concurrency-proof", "describe": "deep dive proves bounded concurrency with a live peak-concurrency measurement",
+      "run": "grep -c 'peak concurrent region-scans observed' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m23-dd-concurrency-proof-references-lock", "describe": "the concurrency proof uses a lock-protected counter, not a guess",
+      "run": "grep -c 'threading.Lock' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-dd-references-lab-phase-2-contrast", "describe": "deep dive explicitly contrasts against the lab's Phase 2 buggy-version measurement",
+      "run": "grep -c 'Phase 2' site/docs/m23-multi-region-inventory/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m23-dd-scripts-run-live", "describe": "the three deep-dive demo scripts actually execute and produce the claimed output",
+      "run": "cd labs/checkpoints/v1.8.0 && uv run python -c \"import boto3; from moto import mock_aws\n@mock_aws\ndef demo():\n    c = boto3.client('ec2', region_name='us-east-1')\n    for _ in range(12):\n        c.run_instances(ImageId='ami-12345678', MinCount=1, MaxCount=1, InstanceType='t2.micro')\n    from platformops.multiregion import list_ec2_instances\n    print(len(list_ec2_instances(c, page_size=5)))\ndemo()\"",
+      "assert": { "contains": "12" }, "weight": 3 }
+  ]
+}
