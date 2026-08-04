@@ -14,6 +14,7 @@ use the matching folder here instead.
 - `v0.0/` — end of Module 2 (Project Foundation)
 - `v0.1/` — end of Module 3 (Infrastructure Inventory Reporter)
 - `v0.2/` — end of Module 4 (Modular Inventory Engine)
+- `v0.3/` — end of Module 5 (Service Definition Model)
 
 (More folders are added as later modules ship.)
 
@@ -47,6 +48,34 @@ cd ~/platformops
 uv sync
 uv run pytest -q
 ```
+
+**4. Start over from nothing — when `~/platformops` is gone completely.**
+
+If you lost the whole project (no folder, no git history), rebuild it with its full tag
+history by replaying the checkpoints in order. Example up to v0.2 (adjust the last step to
+the newest release you had reached):
+
+```bash
+mkdir ~/platformops && cd ~/platformops
+git init -b main
+
+cp -r ~/307-aipython-labs/labs/checkpoints/v0.0/. .
+git add -A && git commit -m "platformops v0.0 — Project Foundation" && git tag v0.0
+
+cp -r ~/307-aipython-labs/labs/checkpoints/v0.1/. .
+git add -A && git commit -m "platformops v0.1 — Infrastructure Inventory Reporter" && git tag v0.1
+
+rm src/platformops/inventory.py   # v0.2 split this file into a package
+cp -r ~/307-aipython-labs/labs/checkpoints/v0.2/. .
+git add -A && git commit -m "platformops v0.2 — Modular Inventory Engine" && git tag v0.2
+
+uv sync && uv run pytest -q
+```
+
+Each checkpoint becomes one commit with its release tag, so `git tag` and the Release Ladder
+tool show the same history a learner who never lost their project would have. When a step
+between two checkpoints deleted a file (like the v0.2 package split above), remove it before
+copying the next checkpoint — the module's own lab page tells you when that happened.
 
 ## Worked example
 
