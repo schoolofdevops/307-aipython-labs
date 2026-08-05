@@ -1,0 +1,187 @@
+{
+  "checks": [
+    { "id": "m27-dockerfile-exists", "describe": "Dockerfile exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.2.0/Dockerfile && echo present || echo missing",
+      "assert": { "matches": "^present$" }, "weight": 3 },
+
+    { "id": "m27-dockerignore-exists", "describe": ".dockerignore exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.2.0/.dockerignore && echo present || echo missing",
+      "assert": { "matches": "^present$" }, "weight": 2 },
+
+    { "id": "m27-dockerfile-is-multistage", "describe": "Dockerfile declares two build stages (builder + runtime)",
+      "run": "grep -c '^FROM ' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^2$" }, "weight": 4 },
+
+    { "id": "m27-dockerfile-stages-named", "describe": "both stages are named (AS builder, AS runtime)",
+      "run": "grep -cE '^FROM .+ AS (builder|runtime)$' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^2$" }, "weight": 2 },
+
+    { "id": "m27-dockerfile-uses-uv-sync-frozen", "describe": "builder stage installs dependencies with uv sync --frozen",
+      "run": "grep -c 'uv sync --frozen' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dockerfile-no-editable-install", "describe": "builder stage installs platformops non-editable",
+      "run": "grep -c -- '--no-editable' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dockerfile-skips-dev-deps", "describe": "builder stage skips the dev dependency group",
+      "run": "grep -c -- '--no-dev' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m27-dockerfile-creates-dedicated-user", "describe": "runtime stage creates a dedicated, non-root user",
+      "run": "grep -c 'useradd' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-dockerfile-switches-user", "describe": "runtime stage switches to the non-root user with USER",
+      "run": "grep -c '^USER platformops$' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m27-dockerfile-not-root-uid", "describe": "the dedicated user is not uid 0",
+      "run": "grep -c 'useradd --uid 0 ' labs/checkpoints/v2.2.0/Dockerfile; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m27-dockerfile-has-healthcheck", "describe": "runtime stage declares a HEALTHCHECK",
+      "run": "grep -c '^HEALTHCHECK' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-healthcheck-uses-local-status", "describe": "the HEALTHCHECK runs platformops local-status, not a network call",
+      "run": "grep -c 'local-status' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dockerfile-only-venv-crosses-stages", "describe": "only the .venv folder is copied from the builder stage into runtime",
+      "run": "grep -c 'COPY --from=builder' labs/checkpoints/v2.2.0/Dockerfile",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-dockerignore-excludes-venv", "describe": ".dockerignore excludes the host .venv from the build context",
+      "run": "grep -c '^\\.venv$' labs/checkpoints/v2.2.0/.dockerignore",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-dockerignore-excludes-git", "describe": ".dockerignore excludes .git",
+      "run": "grep -c '^\\.git$' labs/checkpoints/v2.2.0/.dockerignore",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-dockerignore-keeps-readme", "describe": ".dockerignore does NOT exclude README.md -- uv sync needs it for the readme field",
+      "run": "grep -c '^README.md$' labs/checkpoints/v2.2.0/.dockerignore; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m27-configmap-exists", "describe": "k8s/configmap.yaml exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.2.0/k8s/configmap.yaml && echo present || echo missing",
+      "assert": { "matches": "^present$" }, "weight": 2 },
+
+    { "id": "m27-secret-exists", "describe": "k8s/secret.yaml exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.2.0/k8s/secret.yaml && echo present || echo missing",
+      "assert": { "matches": "^present$" }, "weight": 2 },
+
+    { "id": "m27-job-exists", "describe": "k8s/job.yaml exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.2.0/k8s/job.yaml && echo present || echo missing",
+      "assert": { "matches": "^present$" }, "weight": 3 },
+
+    { "id": "m27-job-is-batch-job-kind", "describe": "job.yaml declares kind: Job, not Deployment",
+      "run": "grep -c '^kind: Job$' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-job-restart-policy-never", "describe": "job.yaml sets restartPolicy: Never",
+      "run": "grep -c 'restartPolicy: Never' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-job-backoff-limit-zero", "describe": "job.yaml sets backoffLimit: 0",
+      "run": "grep -c 'backoffLimit: 0' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-job-has-resource-requests-and-limits", "describe": "job.yaml sets both resources.requests and resources.limits",
+      "run": "grep -cE 'requests:|limits:' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^[2-9]" }, "weight": 4 },
+
+    { "id": "m27-job-reads-secret-via-envfrom", "describe": "job.yaml reads the Secret through envFrom.secretRef, not a hardcoded value",
+      "run": "grep -c 'secretRef' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-job-mounts-configmap", "describe": "job.yaml mounts the ConfigMap as a volume",
+      "run": "grep -c 'configMap' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-job-runs-non-root-securitycontext", "describe": "job.yaml sets a non-root securityContext",
+      "run": "grep -c 'runAsNonRoot: true' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-job-drops-all-capabilities", "describe": "job.yaml drops all Linux capabilities",
+      "run": "grep -c 'drop: \\[\"ALL\"\\]' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-job-no-service-account-token", "describe": "job.yaml disables automounting a Kubernetes API service-account token -- this Job never calls the API",
+      "run": "grep -c 'automountServiceAccountToken: false' labs/checkpoints/v2.2.0/k8s/job.yaml",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m27-no-kubernetes-python-client-module", "describe": "no src/platformops/kubernetes*.py module exists -- the Python Kubernetes client is Module 28's scope, not this one's",
+      "run": "test -f labs/checkpoints/v2.2.0/src/platformops/kubernetes.py -o -f labs/checkpoints/v2.2.0/src/platformops/kubernetes_client.py && echo found || echo absent",
+      "assert": { "matches": "^absent$" }, "weight": 5 },
+
+    { "id": "m27-pyproject-version-bumped", "describe": "pyproject.toml is at version 2.2.0",
+      "run": "grep -c 'version = \"2.2.0\"' labs/checkpoints/v2.2.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-changelog-has-2-2-0-entry", "describe": "CHANGELOG.md documents the 2.2.0 release",
+      "run": "grep -c '## \\[2.2.0\\]' labs/checkpoints/v2.2.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m27-lesson-file-exists", "describe": "lesson.md exists for M27",
+      "run": "test -f site/docs/m27-containerizing-python/lesson.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m27-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m27-containerizing-python/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m27-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m27-containerizing-python/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-lesson-scopes-out-m28", "describe": "lesson explicitly scopes the Kubernetes Python client out to Module 28",
+      "run": "grep -c 'Module 28' site/docs/m27-containerizing-python/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-lab-file-exists", "describe": "lab.md exists for M27",
+      "run": "test -f site/docs/m27-containerizing-python/lab.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m27-lab-has-teardown", "describe": "lab has a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-lab-shows-real-secret-override-proof", "describe": "lab folds in the real Job log output proving the Secret override reached the config (environment: staging)",
+      "run": "grep -c '\"environment\": \"staging\"' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-lab-shows-real-non-root-proof", "describe": "lab folds in the real non-root uid check output",
+      "run": "grep -c 'uid=1000(platformops)' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-lab-shows-real-grype-app-check", "describe": "lab proves zero grype findings land in platformops's own pinned dependencies",
+      "run": "grep -c 'findings in platformops or its pinned dependencies: none' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-lab-explains-docker-scout-unavailable", "describe": "lab documents why docker scout is not used on this environment",
+      "run": "grep -c 'docker scout' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-lab-version-bump-confirmed", "describe": "lab's quality-gate phase shows the version bumped to 2.2.0",
+      "run": "grep -c 'platformops 2.2.0' site/docs/m27-containerizing-python/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-quiz-file-exists", "describe": "quiz.mdx exists for M27",
+      "run": "test -f site/docs/m27-containerizing-python/quiz.mdx && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m27-quiz-question-count-in-range", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c \"^    prompt: \" site/docs/m27-containerizing-python/quiz.mdx",
+      "assert": { "matches": "^(1[0-5])$" }, "weight": 3 },
+
+    { "id": "m27-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m27-containerizing-python/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-course-config-lists-syft-grype", "describe": "course.config.json lists syft and grype as lab tools",
+      "run": "grep -c '\"name\": \"syft\"\\|\"name\": \"grype\"' course.config.json",
+      "assert": { "matches": "^2$" }, "weight": 3 }
+  ]
+}

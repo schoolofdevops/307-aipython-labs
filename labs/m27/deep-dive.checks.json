@@ -1,0 +1,63 @@
+{
+  "checks": [
+    { "id": "m27-dd-file-exists", "describe": "deep-dive.md exists for M27",
+      "run": "test -f site/docs/m27-containerizing-python/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m27-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-dd-version-reference", "describe": "deep dive's prerequisite check references v2.2.0",
+      "run": "grep -c 'platformops 2.2.0' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m27-dd-has-docker-history-layer-proof", "describe": "deep dive shows the real docker history layer breakdown",
+      "run": "grep -c 'docker history platformops' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dd-has-cgroup-memory-proof", "describe": "deep dive proves the memory limit is kernel-enforced with the exact byte value",
+      "run": "grep -c '134217728' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-dd-has-cgroup-cpu-proof", "describe": "deep dive proves the cpu limit is kernel-enforced with the exact cpu.max value",
+      "run": "grep -c '20000 100000' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-dd-has-containerd-proof", "describe": "deep dive proves a kind Job's Pod is managed by containerd via crictl, not visible to the host's docker ps",
+      "run": "grep -c 'crictl ps' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m27-dd-shows-docker-ps-only-sees-node", "describe": "deep dive shows docker ps on the host only sees the kind node container, not the workload",
+      "run": "grep -c 'kindest/node' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dd-references-module-28", "describe": "deep dive ties the containerd/API split back to why Module 28 uses kubeconfig, not a docker socket",
+      "run": "grep -c 'Module 28' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dd-has-spdx-cyclonedx-comparison", "describe": "deep dive compares real SPDX and CycloneDX package/component counts for the same image",
+      "run": "grep -c 'CycloneDX components' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m27-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m27-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a concrete Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m27-dd-has-teardown", "describe": "deep dive has its own Teardown section removing only what it seeded",
+      "run": "grep -c '^## Teardown' site/docs/m27-containerizing-python/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
