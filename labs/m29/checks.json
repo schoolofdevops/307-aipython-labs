@@ -1,0 +1,171 @@
+{
+  "checks": [
+    { "id": "m29-lesson-file-exists", "describe": "lesson.md exists for M29",
+      "run": "test -f site/docs/m29-safe-kubernetes-operations/lesson.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m29-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m29-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-lesson-continues-m28-thread", "describe": "lesson picks up the thread Module 28 left open about the governed, write-capable module",
+      "run": "grep -c 'Module 28' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-lesson-references-module-25", "describe": "lesson draws the explicit parallel to Module 25's two-gate discipline",
+      "run": "grep -c 'Module 25' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m29-lesson-explains-cooldown-vs-idempotency", "describe": "lesson explains why a restart needs a cooldown, unlike M25's idempotent remediations",
+      "run": "grep -c 'cooldown' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-lesson-is-honest-about-limits", "describe": "lesson is explicit that a restart cannot fix a permanent failure",
+      "run": "grep -c 'permanent' site/docs/m29-safe-kubernetes-operations/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-lab-file-exists", "describe": "lab.md exists for M29",
+      "run": "test -f site/docs/m29-safe-kubernetes-operations/lab.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m29-lab-has-teardown", "describe": "lab has a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-lab-shows-tdd-red-modulenotfound", "describe": "lab shows the real captured ModuleNotFoundError from running python before the module existed",
+      "run": "grep -c \"No module named 'platformops.kubernetes_restart'\" site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-lab-shows-createcontainerconfigerror-proof", "describe": "lab folds in the real CreateContainerConfigError container state",
+      "run": "grep -c 'CreateContainerConfigError' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-imagepullbackoff-proof", "describe": "lab folds in the real ImagePullBackOff container state",
+      "run": "grep -c 'ImagePullBackOff' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-namespace-allowlist-refusal", "describe": "lab folds in the real not_allowed refusal for the billing namespace",
+      "run": "grep -c 'not_allowed' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-dry-run-resourceversion-proof", "describe": "lab folds in the real resourceVersion-unchanged dry-run proof",
+      "run": "grep -c 'resourceVersion' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-refused-without-approve", "describe": "lab shows restart-execute refusing without --approve",
+      "run": "grep -c 'requires --approve -- refusing to mutate' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-rolled-out-success", "describe": "lab folds in a real rolled_out restart outcome",
+      "run": "grep -c 'rolled_out' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-cooldown-refusal", "describe": "lab folds in the real cooldown/loop-guard refusal",
+      "run": "grep -c 'runaway-restart-loop guard' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-shows-timed-out-honesty", "describe": "lab folds in a real timed_out outcome for the permanently-broken Deployment",
+      "run": "grep -c 'timed_out' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-lab-has-audit-log-content", "describe": "lab shows the real JSON-lines audit log content",
+      "run": "grep -c 'rollout_outcome' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-lab-has-cli-command-names", "describe": "lab documents both restart-plan and restart-execute CLI commands",
+      "run": "grep -c 'restart-plan\\|restart-execute' site/docs/m29-safe-kubernetes-operations/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-quiz-file-exists", "describe": "quiz.mdx exists for M29",
+      "run": "test -f site/docs/m29-safe-kubernetes-operations/quiz.mdx && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m29-quiz-question-count-in-range", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c \"^    prompt: \" site/docs/m29-safe-kubernetes-operations/quiz.mdx",
+      "assert": { "matches": "^(1[0-5])$" }, "weight": 3 },
+
+    { "id": "m29-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m29-safe-kubernetes-operations/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-src-kubernetes-restart-exists", "describe": "kubernetes_restart.py exists in the v2.4.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 3 },
+
+    { "id": "m29-src-single-literal-write-call-site", "describe": "kubernetes_restart.py has exactly one literal .patch_namespaced_deployment( call site (the dry-run one)",
+      "run": "grep -oE '\\.patch_namespaced_deployment\\(' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py | wc -l | tr -d ' '",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m29-src-no-create-delete-replace-calls", "describe": "kubernetes_restart.py makes zero create/delete/replace API calls",
+      "run": "grep -cE '\\.(create|delete|replace)_namespaced' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m29-src-execute-restart-dispatches-dynamically", "describe": "execute_restart's real mutation is dispatched via getattr, not a literal write call",
+      "run": "grep -c 'getattr(apps_client, action.api_call)' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m29-src-dry-run-all-present", "describe": "build_restart_plan validates with dry_run=All",
+      "run": "grep -c 'dry_run=\"All\"' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-src-namespace-allowlist-gate", "describe": "build_restart_plan checks the namespace allowlist",
+      "run": "grep -c 'namespace not in allowlist' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m29-src-cooldown-guard-class", "describe": "RestartCoolingDownError is defined -- the loop guard",
+      "run": "grep -c 'class RestartCoolingDownError' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m29-src-cooldown-reads-disk", "describe": "last_restart_at reads the audit log from disk, not in-memory state",
+      "run": "grep -c 'def last_restart_at' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-src-monitor-checks-updated-replicas", "describe": "monitor_rollout checks updated_replicas, not rollout_state alone",
+      "run": "grep -c 'status.updated_replicas == status.desired_replicas' labs/checkpoints/v2.4.0/src/platformops/kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m29-cli-restart-plan-wired", "describe": "the restart-plan command is wired into cli.py",
+      "run": "grep -c 'app.command(\"restart-plan\")' labs/checkpoints/v2.4.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-cli-restart-execute-wired", "describe": "the restart-execute command is wired into cli.py",
+      "run": "grep -c 'app.command(\"restart-execute\")' labs/checkpoints/v2.4.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-k8s-ops-config-exists", "describe": "k8s-ops.example.yaml exists in the v2.4.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.4.0/k8s-ops.example.yaml && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m29-k8s-scenario-manifests-exist", "describe": "all six k8s manifests for this module's scenario exist in the checkpoint",
+      "run": "ls labs/checkpoints/v2.4.0/k8s/checkout-namespace.yaml labs/checkpoints/v2.4.0/k8s/billing-namespace.yaml labs/checkpoints/v2.4.0/k8s/checkout-web.yaml labs/checkpoints/v2.4.0/k8s/checkout-web-config.yaml labs/checkpoints/v2.4.0/k8s/checkout-worker.yaml labs/checkpoints/v2.4.0/k8s/billing-invoices.yaml 2>/dev/null | wc -l | tr -d ' '",
+      "assert": { "matches": "^6$" }, "weight": 3 },
+
+    { "id": "m29-pyproject-version-bumped", "describe": "pyproject.toml version is bumped to 2.4.0",
+      "run": "grep -c 'version = \"2.4.0\"' labs/checkpoints/v2.4.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-changelog-has-entry", "describe": "CHANGELOG.md has the 2.4.0 Governed Kubernetes Operations entry",
+      "run": "grep -c '\\[2.4.0\\] - Governed Kubernetes Operations' labs/checkpoints/v2.4.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-tests-exist", "describe": "test_kubernetes_restart.py exists in the v2.4.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.4.0/tests/test_kubernetes_restart.py && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 3 },
+
+    { "id": "m29-tests-cover-cooldown", "describe": "tests cover the cooling-down refusal path",
+      "run": "grep -c 'def test_execute_restart_raises_when_cooling_down' labs/checkpoints/v2.4.0/tests/test_kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-tests-cover-single-write-call-site", "describe": "tests assert exactly one literal write call site in the module",
+      "run": "grep -c 'def test_only_one_literal_patch_call_site_exists_in_the_whole_module' labs/checkpoints/v2.4.0/tests/test_kubernetes_restart.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-course-config-deep-dive-intent-filled-in", "describe": "course.config.json's m29 deep_dive_intent is filled in, not the TBD placeholder",
+      "run": "grep -A 20 '\"id\": \"m29\"' course.config.json | grep -c 'deep-dive intent TBD'; true",
+      "assert": { "matches": "^0$" }, "weight": 2 }
+  ]
+}

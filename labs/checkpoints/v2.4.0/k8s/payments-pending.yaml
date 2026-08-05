@@ -1,0 +1,32 @@
+# Scenario 3: Pending. The pod requests far more memory than any node in
+# this kind cluster has -- the scheduler never finds a node that fits it,
+# so the pod stays Pending indefinitely with a FailedScheduling warning
+# event instead of ever starting a container.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: payments
+  labels:
+    app: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments
+  template:
+    metadata:
+      labels:
+        app: payments
+    spec:
+      containers:
+        - name: payments
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep 3600"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 900Gi
+            limits:
+              cpu: 200m
+              memory: 900Gi

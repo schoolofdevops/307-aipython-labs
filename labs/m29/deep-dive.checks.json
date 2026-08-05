@@ -1,0 +1,75 @@
+{
+  "checks": [
+    { "id": "m29-dd-file-exists", "describe": "deep-dive.md exists for M29",
+      "run": "test -f site/docs/m29-safe-kubernetes-operations/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m29-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-version-reference", "describe": "deep dive's prerequisite check references v2.4.0",
+      "run": "grep -c 'platformops 2.4.0' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m29-dd-uses-own-cluster-name", "describe": "deep dive builds its own kind cluster, separate from the lab's",
+      "run": "grep -c 'platformops-m29-dd' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m29-dd-has-single-write-call-grep-proof", "describe": "deep dive shows the single-literal-write-call-site grep proof",
+      "run": "grep -c '.patch_namespaced_deployment(' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-dd-has-resourceversion-live-proof", "describe": "deep dive proves the dry run leaves resourceVersion unchanged, live",
+      "run": "grep -c 'resourceVersion' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-dd-has-two-process-cooldown-proof", "describe": "deep dive proves the cooldown holds across two separate CLI process invocations",
+      "run": "grep -c 'runaway-restart-loop guard' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-dd-has-cooldown-expiry-proof", "describe": "deep dive proves the cooldown genuinely expires, not a permanent lockout",
+      "run": "grep -c 'sleep 11' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m29-dd-has-updated-replicas-source-proof", "describe": "deep dive shows the updated_replicas source-line proof for monitor_rollout",
+      "run": "grep -c 'status.updated_replicas == status.desired_replicas' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m29-dd-has-mermaid-or-source-proof-section", "describe": "deep dive has numbered sections going under the hood",
+      "run": "grep -c '^## [0-9]' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 2 },
+
+    { "id": "m29-dd-has-common-pitfalls", "describe": "deep dive has its own Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-use-it-when-bullets-present", "describe": "the closing tip has at least 4 concrete Use it when bullets",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^[4-9]" }, "weight": 3 },
+
+    { "id": "m29-dd-has-teardown", "describe": "deep dive has its own Teardown section removing only what it seeded",
+      "run": "grep -c '^## Teardown' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m29-dd-teardown-deletes-its-own-cluster", "describe": "deep dive's Teardown deletes the deep-dive's own cluster, not the lab's",
+      "run": "grep -c 'kind delete cluster --name platformops-m29-dd' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m29-dd-does-not-reteach-what-a-deployment-is", "describe": "deep dive does not re-explain what a Deployment is (kept out of scope, already covered by lesson/lab)",
+      "run": "grep -c 'A Deployment is' site/docs/m29-safe-kubernetes-operations/deep-dive.md",
+      "assert": { "matches": "^0$" }, "weight": 2 }
+  ]
+}
