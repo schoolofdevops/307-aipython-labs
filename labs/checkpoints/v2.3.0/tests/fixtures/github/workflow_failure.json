@@ -1,0 +1,13 @@
+{
+  "total_count": 1,
+  "workflow_runs": [
+    {
+      "id": 4821094502,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "bump-processor-client",
+      "html_url": "https://github.com/acme-platform/payments/actions/runs/4821094502"
+    }
+  ]
+}

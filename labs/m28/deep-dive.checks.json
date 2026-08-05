@@ -1,0 +1,99 @@
+{
+  "checks": [
+    { "id": "m28-dd-file-exists", "describe": "deep-dive.md exists for M28",
+      "run": "test -f site/docs/m28-kubernetes-automation/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m28-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-dd-version-reference", "describe": "deep dive's prerequisite check references v2.3.0",
+      "run": "grep -c 'platformops 2.3.0' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-dd-uses-own-cluster-name", "describe": "deep dive builds its own kind cluster, separate from the lab's",
+      "run": "grep -c 'platformops-m28-dd' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-dd-has-dot-anchored-grep-proof", "describe": "deep dive shows the dot-anchored no-write-calls grep proof",
+      "run": "grep -c 'grep -nE \"\\\\.(create|patch|delete|replace)_\"' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-dd-explains-false-positive-risk", "describe": "deep dive explains why the naive (non-dot-anchored) grep is a false positive against the module's own docstring",
+      "run": "grep -c 'false positive' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-raw-rest-proof", "describe": "deep dive shows the raw kubectl get --raw REST call to the Deployment endpoint",
+      "run": "grep -c 'kubectl get --raw' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-client-debug-http-trace", "describe": "deep dive shows the Python client's own debug=True wire-level HTTP GET request",
+      "run": "grep -c 'OpenAPI-Generator' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-dd-shows-same-api-path-both-ways", "describe": "deep dive shows the identical REST path reached by both kubectl and the python client",
+      "run": "grep -c '/apis/apps/v1/namespaces/payments/deployments/payments' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-rbac-manifest-reference", "describe": "deep dive applies the least-privilege RBAC manifest from the lab's k8s directory",
+      "run": "grep -c 'k8s/payments-readonly-rbac.yaml' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-can-i-proof", "describe": "deep dive proves least privilege live with kubectl auth can-i",
+      "run": "grep -c 'kubectl auth can-i' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-dd-has-real-403-proof", "describe": "deep dive proves a real 403 Forbidden from a write attempt with the restricted identity",
+      "run": "grep -c '\"status\": 403\\|status: 403' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-dd-shows-forbidden-message-names-the-identity", "describe": "deep dive's captured 403 body names the restricted ServiceAccount identity",
+      "run": "grep -c 'system:serviceaccount:payments:payments-inspector' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-watch-mechanism-proof", "describe": "deep dive proves the watch mechanism live with a real ADDED/MODIFIED event stream",
+      "run": "grep -c 'ADDED payments' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-dd-has-modified-event", "describe": "deep dive's watch proof shows a MODIFIED event pushed on the same open connection",
+      "run": "grep -c 'MODIFIED payments' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-script-vs-controller-mermaid", "describe": "deep dive has a Mermaid diagram contrasting the script's one-shot call with a controller's watch loop",
+      "run": "grep -c '```mermaid' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-dd-references-module-29", "describe": "deep dive ties the script-vs-controller distinction forward to Module 29's guardrails",
+      "run": "grep -c 'Module 29' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-dd-use-it-when-bullets-present", "describe": "the closing tip has at least 4 concrete Use it when bullets",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^[4-9]" }, "weight": 3 },
+
+    { "id": "m28-dd-has-teardown", "describe": "deep dive has its own Teardown section removing only what it seeded",
+      "run": "grep -c '^## Teardown' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-dd-teardown-deletes-its-own-cluster", "describe": "deep dive's Teardown deletes the deep-dive's own cluster, not the lab's",
+      "run": "grep -c 'kind delete cluster --name platformops-m28-dd' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m28-dd-does-not-reteach-basics", "describe": "deep dive does not re-explain what a ReplicaSet is (kept out of scope, already covered by lesson/lab)",
+      "run": "grep -c 'A ReplicaSet is' site/docs/m28-kubernetes-automation/deep-dive.md",
+      "assert": { "matches": "^0$" }, "weight": 2 }
+  ]
+}

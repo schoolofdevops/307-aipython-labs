@@ -1,0 +1,119 @@
+{
+  "checks": [
+    { "id": "m28-lesson-file-exists", "describe": "lesson.md exists for M28",
+      "run": "test -f site/docs/m28-kubernetes-automation/lesson.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m28-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m28-kubernetes-automation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m28-kubernetes-automation/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-lesson-continues-m27-thread", "describe": "lesson picks up the thread Module 27 left open about reading Kubernetes state from Python",
+      "run": "grep -c 'Module 27' site/docs/m28-kubernetes-automation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-lesson-references-module-29", "describe": "lesson forward-references Module 29's governed operations",
+      "run": "grep -c 'Module 29' site/docs/m28-kubernetes-automation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-lab-file-exists", "describe": "lab.md exists for M28",
+      "run": "test -f site/docs/m28-kubernetes-automation/lab.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m28-lab-has-teardown", "describe": "lab has a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m28-lab-shows-real-crashloop-proof", "describe": "lab folds in the real CrashLoopBackOff container state",
+      "run": "grep -c 'waiting -- CrashLoopBackOff' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-lab-shows-real-imagepullbackoff-proof", "describe": "lab folds in the real ImagePullBackOff container state",
+      "run": "grep -c 'waiting -- ImagePullBackOff' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-lab-shows-real-pending-proof", "describe": "lab folds in the real FailedScheduling warning event for the unschedulable Pod",
+      "run": "grep -c 'FailedScheduling' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-lab-shows-real-healthy-proof", "describe": "lab folds in the real healthy rollout_state and exit 0",
+      "run": "grep -c 'HEALTHY -- desired=2 ready=2 available=2' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m28-lab-shows-tdd-red-importerror", "describe": "lab shows the real captured ImportError from running pytest before the module existed",
+      "run": "grep -c \"cannot import name 'kubernetes_inspect'\" site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-lab-has-cli-command-name", "describe": "lab documents the real workload-inspect CLI command name",
+      "run": "grep -c 'workload-inspect' site/docs/m28-kubernetes-automation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-quiz-file-exists", "describe": "quiz.mdx exists for M28",
+      "run": "test -f site/docs/m28-kubernetes-automation/quiz.mdx && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m28-quiz-question-count-in-range", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c \"^    prompt: \" site/docs/m28-kubernetes-automation/quiz.mdx",
+      "assert": { "matches": "^(1[0-5])$" }, "weight": 3 },
+
+    { "id": "m28-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m28-kubernetes-automation/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m28-src-kubernetes-inspect-exists", "describe": "kubernetes_inspect.py exists in the v2.3.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.3.0/src/platformops/kubernetes_inspect.py && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 3 },
+
+    { "id": "m28-src-no-write-calls", "describe": "kubernetes_inspect.py makes zero create/patch/delete/replace API calls (dot-anchored, proof-safe grep)",
+      "run": "grep -cE '\\.(create|patch|delete|replace)_' labs/checkpoints/v2.3.0/src/platformops/kubernetes_inspect.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m28-src-k8sclient-exists", "describe": "k8sclient.py exists in the v2.3.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.3.0/src/platformops/k8sclient.py && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m28-src-client-passed-as-parameter", "describe": "inspect_workload takes apps_client and core_client as parameters, never builds them internally",
+      "run": "grep -c 'def inspect_workload(' labs/checkpoints/v2.3.0/src/platformops/kubernetes_inspect.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m28-cli-command-wired", "describe": "the workload-inspect command is wired into cli.py",
+      "run": "grep -c 'app.command(\"workload-inspect\")' labs/checkpoints/v2.3.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m28-pyproject-has-kubernetes-dep", "describe": "pyproject.toml pins kubernetes>=36.0.3",
+      "run": "grep -c 'kubernetes>=36.0.3' labs/checkpoints/v2.3.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m28-pyproject-has-mypy-override", "describe": "pyproject.toml has a mypy override for the untyped kubernetes package",
+      "run": "grep -c 'kubernetes.\\*' labs/checkpoints/v2.3.0/pyproject.toml",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m28-pyproject-version-bumped", "describe": "pyproject.toml version is bumped to 2.3.0",
+      "run": "grep -c 'version = \"2.3.0\"' labs/checkpoints/v2.3.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m28-changelog-has-entry", "describe": "CHANGELOG.md has the 2.3.0 Kubernetes Health Inspector entry",
+      "run": "grep -c '\\[2.3.0\\] - Kubernetes Health Inspector' labs/checkpoints/v2.3.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m28-tests-exist", "describe": "test_kubernetes_inspect.py exists in the v2.3.0 checkpoint",
+      "run": "test -f labs/checkpoints/v2.3.0/tests/test_kubernetes_inspect.py && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 3 },
+
+    { "id": "m28-tests-cover-rollout-state", "describe": "tests cover rollout_state's four outcomes",
+      "run": "grep -c 'def test_rollout_state_is_' labs/checkpoints/v2.3.0/tests/test_kubernetes_inspect.py",
+      "assert": { "matches": "^4$" }, "weight": 3 },
+
+    { "id": "m28-k8s-scenario-manifests-exist", "describe": "all four scenario manifests, the namespace manifest, and the read-only RBAC manifest exist in the checkpoint",
+      "run": "ls labs/checkpoints/v2.3.0/k8s/payments-*.yaml | wc -l | tr -d ' '",
+      "assert": { "matches": "^6$" }, "weight": 3 },
+
+    { "id": "m28-course-config-deep-dive-intent-filled-in", "describe": "course.config.json's m28 deep_dive_intent is filled in, not the TBD placeholder",
+      "run": "grep -A 20 '\"id\": \"m28\"' course.config.json | grep -c 'deep-dive intent TBD'; true",
+      "assert": { "matches": "^0$" }, "weight": 2 }
+  ]
+}
