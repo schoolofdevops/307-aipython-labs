@@ -1,0 +1,135 @@
+{
+  "checks": [
+    { "id": "m25-module-exists", "describe": "cloudremediate.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m25-remediation-config-exists", "describe": "remediation.example.yaml exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.0.0/remediation.example.yaml && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m25-remediation-config-has-allowlist-and-policies", "describe": "remediation.example.yaml has both an allowlist list and a policies map",
+      "run": "grep -c '^allowlist:' labs/checkpoints/v2.0.0/remediation.example.yaml; grep -c '^policies:' labs/checkpoints/v2.0.0/remediation.example.yaml",
+      "assert": { "contains": "1\n1" }, "weight": 2 },
+
+    { "id": "m25-allowlist-has-exactly-three-remediable-rules", "describe": "the allowlist names exactly the three remediable rules",
+      "run": "grep -cE '^  - (required-tags|require-encryption|no-public-exposure)$' labs/checkpoints/v2.0.0/remediation.example.yaml",
+      "assert": { "matches": "^3$" }, "weight": 3 },
+
+    { "id": "m25-allowlist-never-names-approved-regions-or-max-age-days", "describe": "approved-regions and max-age-days are never on the example allowlist",
+      "run": "grep -cE '^  - (approved-regions|max-age-days)$' labs/checkpoints/v2.0.0/remediation.example.yaml; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m25-has-remediation-plan-dataclass", "describe": "RemediationPlan dataclass is defined",
+      "run": "grep -c 'class RemediationPlan' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-has-remediation-result-dataclass", "describe": "RemediationResult dataclass is defined",
+      "run": "grep -c 'class RemediationResult' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-has-build-remediation-plan", "describe": "build_remediation_plan() -- the planning function -- is defined",
+      "run": "grep -c 'def build_remediation_plan(' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-allowlist-checked-before-planner-lookup", "describe": "build_remediation_plan() checks the allowlist before it looks up a planner -- the allowlist is an independent gate, not just a filter on remediable rules",
+      "run": "awk '/^def build_remediation_plan\\(/{p=1} p{print} /^def append_audit_log\\(/{exit}' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py | grep -n 'rule_id not in allowlist\\|PLANNERS.get' | head -2 | cut -d: -f1 | tr '\\n' ' '",
+      "assert": { "matches": "^[0-9]+ [0-9]+ $" }, "weight": 5 },
+
+    { "id": "m25-has-planners-dict-with-exactly-three-entries", "describe": "PLANNERS registers exactly the three remediable rules",
+      "run": "grep -A4 '^PLANNERS: dict' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py | grep -cE '\"(required-tags|require-encryption|no-public-exposure)\":'",
+      "assert": { "matches": "^3$" }, "weight": 3 },
+
+    { "id": "m25-no-planner-exists-for-approved-regions-or-max-age-days", "describe": "no planner function is ever written for approved-regions or max-age-days -- not just excluded from the allowlist",
+      "run": "grep -cE '_plan_approved_regions|_plan_max_age_days' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m25-not-supported-reason-names-human-decision", "describe": "a finding with no planner comes back not_supported with a reason naming a human decision",
+      "run": "grep -c 'human decision' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m25-has-execute-remediation-plan", "describe": "execute_remediation_plan() -- the execute function -- is defined",
+      "run": "grep -c 'def execute_remediation_plan(' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-execute-refuses-without-approve", "describe": "execute_remediation_plan() raises RemediationNotApprovedError rather than silently no-oping without approve",
+      "run": "grep -c 'raise RemediationNotApprovedError' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m25-execute-rechecks-state-via-a-fresh-plan", "describe": "execute_remediation_plan() rebuilds a fresh plan from live state before mutating -- the idempotency guarantee",
+      "run": "awk '/^def execute_remediation_plan\\(/{p=1} p{print} /^def execute_remediation_batch\\(/{exit}' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py | grep -c 'fresh_plan = build_remediation_plan('",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m25-verifies-post-change-state", "describe": "execute_remediation_plan() reads resource state again after the write call, it does not treat a successful call alone as proof",
+      "run": "grep -c '_after_state_for(' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m25-has-audit-log-writer", "describe": "append_audit_log() -- the rollback record writer -- is defined",
+      "run": "grep -c 'def append_audit_log(' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-audit-record-has-before-after-and-approver", "describe": "the audit-log record captures before_state, after_state and approved_by -- not just that a change happened",
+      "run": "grep -c '\"before_state\": before_state' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py; grep -c '\"after_state\": after_state' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py; grep -c '\"approved_by\": actor' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "contains": "1\n1\n1" }, "weight": 5 },
+
+    { "id": "m25-has-default-batch-cap-of-five", "describe": "DEFAULT_BATCH_CAP is 5",
+      "run": "grep -c '^DEFAULT_BATCH_CAP = 5$' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-batch-refuses-over-cap-not-truncates", "describe": "execute_remediation_batch() raises BatchTooLargeError rather than silently truncating an over-cap batch",
+      "run": "grep -c 'raise BatchTooLargeError' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m25-cli-has-remediate-plan-command", "describe": "remediate-plan CLI command is wired",
+      "run": "grep -c '@app.command(\"remediate-plan\")' labs/checkpoints/v2.0.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-cli-has-remediate-execute-command", "describe": "remediate-execute CLI command is wired",
+      "run": "grep -c '@app.command(\"remediate-execute\")' labs/checkpoints/v2.0.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-cli-has-remediate-execute-batch-command", "describe": "remediate-execute-batch CLI command is wired",
+      "run": "grep -c '@app.command(\"remediate-execute-batch\")' labs/checkpoints/v2.0.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25-cli-execute-refuses-without-approve-then-exits-nonzero", "describe": "the CLI's remediate-execute command catches RemediationNotApprovedError and exits non-zero",
+      "run": "grep -A3 'except RemediationNotApprovedError as exc:' labs/checkpoints/v2.0.0/src/platformops/cli.py | grep -c 'typer.Exit(code=1)'",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m25-version-bumped", "describe": "pyproject.toml version is 2.0.0",
+      "run": "grep -c 'version = \"2.0.0\"' labs/checkpoints/v2.0.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-changelog-has-entry", "describe": "CHANGELOG.md has a [2.0.0] entry",
+      "run": "grep -c '## \\[2.0.0\\]' labs/checkpoints/v2.0.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-lab-warns-about-endpoint-url", "describe": "the lab warns learners to always pass --endpoint-url explicitly, since this module can mutate real AWS if it is left off",
+      "run": "grep -c -- '--endpoint-url' site/docs/m25-safe-cloud-remediation/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m25-lab-teardown-does-not-instruct-floci-stop", "describe": "the lab's Teardown never tells the learner to run floci stop",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m25-safe-cloud-remediation/lab.md | grep -c '^floci stop'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m25-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m25-safe-cloud-remediation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m25-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '## Common pitfalls' site/docs/m25-safe-cloud-remediation/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25-lesson-uses-its-own-hospital-analogy", "describe": "the lesson uses its own hospital/medication-order analogy as its throughline, not a repeat of M24's building-inspector analogy",
+      "run": "grep -c 'doctor' site/docs/m25-safe-cloud-remediation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m25-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m25-safe-cloud-remediation/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m25-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m25-safe-cloud-remediation/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

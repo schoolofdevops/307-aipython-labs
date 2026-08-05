@@ -1,0 +1,79 @@
+{
+  "checks": [
+    { "id": "m25dd-frontmatter-sidebar-position", "describe": "deep-dive.md has sidebar_position: 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-frontmatter-sidebar-label", "describe": "deep-dive.md has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-frontmatter-title-single-quoted", "describe": "deep-dive.md has a single-quoted title",
+      "run": "grep -cE \"^title: '.*'$\" site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-has-where-this-picks-up-admonition", "describe": "deep-dive.md has a state-tolerant 'where this picks up' admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25dd-has-where-you-will-use-this-close", "describe": "deep-dive.md closes with the required tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m25dd-use-it-when-bullets-present", "describe": "the closing tip's bullets each end with a real-work trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^[3-9]$" }, "weight": 3 },
+
+    { "id": "m25dd-has-mermaid-diagram", "describe": "deep-dive.md has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m25dd-no-space-form-admonitions", "describe": "deep-dive.md uses only bracket-form admonitions, never the space form",
+      "run": "grep -cE ':::(info|tip|warning|danger|note) [A-Za-z]' site/docs/m25-safe-cloud-remediation/deep-dive.md; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m25dd-covers-allowlist-gate-section", "describe": "deep-dive.md has the allowlist-gate section",
+      "run": "grep -cE '^## 1 ' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-covers-idempotency-section", "describe": "deep-dive.md has the idempotency section",
+      "run": "grep -cE '^## 2 ' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-covers-audit-log-section", "describe": "deep-dive.md has the audit-log/rollback-evidence section",
+      "run": "grep -cE '^## 3 ' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m25dd-has-verified-field-argument", "describe": "the deep dive makes the case for the verified field beyond 'no exception was raised'",
+      "run": "grep -c 'verified' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m25dd-shows-real-audit-log-json-line", "describe": "a real captured audit-log JSON line with before_state and after_state is shown",
+      "run": "grep -c '\"before_state\": {\"tags\": {}}, \"after_state\":' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m25dd-allowlist-check-precedes-planner-lookup-in-source", "describe": "mechanical proof: build_remediation_plan() checks the allowlist before it looks up a planner -- line order in the real source, not a description of it",
+      "run": "awk '/^def build_remediation_plan\\(/{p=1; n=0} p{n++} /rule_id not in allowlist/{if(p && !a){a=n}} /PLANNERS\\.get\\(rule_id\\)/{if(p && !b){b=n}} /^def append_audit_log\\(/{exit} END{print (a>0 && b>0 && a<b) ? \"allowlist-first\" : \"wrong-order\"}' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "contains": "allowlist-first" }, "weight": 5 },
+
+    { "id": "m25dd-execute-rebuilds-plan-fresh-before-mutating", "describe": "execute_remediation_plan() calls build_remediation_plan() again before mutating -- the re-check that makes idempotency and the allowlist gate apply at execute time too",
+      "run": "awk '/^def execute_remediation_plan\\(/{p=1} p{print} /^def execute_remediation_batch\\(/{exit}' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py | grep -c 'fresh_plan = build_remediation_plan('",
+      "assert": { "matches": "^1$" }, "weight": 5 },
+
+    { "id": "m25dd-no-second-mutation-path-on-already-fixed", "describe": "an already_fixed fresh_plan returns before any write-mode API call is reached in execute_remediation_plan()",
+      "run": "awk '/^def execute_remediation_plan\\(/{p=1} p{print} /^def execute_remediation_batch\\(/{exit}' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py | awk '/fresh_plan\\.status == \"already_fixed\"/{f=NR} /getattr\\(client, action\\.api_call\\)/{g=NR} END{print (f>0 && g>0 && f<g) ? \"already-fixed-checked-first\" : \"missing-or-wrong-order\"}'",
+      "assert": { "contains": "already-fixed-checked-first" }, "weight": 4 },
+
+    { "id": "m25dd-verified-is-a-fresh-read-back-not-just-no-exception", "describe": "verified is computed by comparing a fresh read (_after_state_for) against before_state, not by the write call merely not raising",
+      "run": "grep -c 'verified = after_state != before_state' labs/checkpoints/v2.0.0/src/platformops/cloudremediate.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m25dd-teardown-does-not-instruct-floci-stop", "describe": "the deep dive's Teardown never tells the learner to run floci stop",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m25-safe-cloud-remediation/deep-dive.md | grep -c '^floci stop'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m25dd-teardown-present", "describe": "deep-dive.md has its own Teardown section, removing only what it seeded",
+      "run": "grep -c '^## Teardown' site/docs/m25-safe-cloud-remediation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
