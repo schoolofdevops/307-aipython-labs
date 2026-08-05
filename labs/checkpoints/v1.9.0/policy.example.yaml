@@ -1,0 +1,43 @@
+# Example cloud hygiene policy -- platformops cloud-audit reads a file shaped like this.
+#
+# Every rule needs: id (unique, matched against exceptions below), check (one
+# of the built-in checks cloudaudit.CHECKS knows), and severity. applies_to
+# is optional -- omit it and the rule applies to every resource type; set it
+# to limit a rule to resource types that evidence-gathering actually covers
+# (today, only s3-bucket carries encrypted/public/created_at evidence).
+
+rules:
+  - id: required-tags
+    check: required_tags
+    severity: high
+    required_tags: [team_owner, environment]
+
+  - id: approved-regions
+    check: approved_regions
+    severity: high
+    approved_regions: [us-east-1, us-west-2]
+
+  - id: max-age-days
+    check: max_age_days
+    severity: medium
+    max_age_days: 90
+
+  - id: require-encryption
+    check: require_encryption
+    severity: high
+    applies_to: [s3-bucket]
+
+  - id: no-public-exposure
+    check: no_public_exposure
+    severity: critical
+    applies_to: [s3-bucket]
+
+# Each exception suppresses exactly one (resource_id, rule_id) pair. expires
+# is a YYYY-MM-DD date; the exception stays active through the end of that
+# day. Leave expires out entirely for an exception that never expires --
+# rare, and worth a second look whenever you see one in a real report.
+exceptions:
+  - resource_id: platformops-legacy-reports
+    rule_id: required-tags
+    reason: "legacy bucket predates the tagging policy -- cleanup tracked in ticket OPS-4021"
+    expires: "2026-12-31"

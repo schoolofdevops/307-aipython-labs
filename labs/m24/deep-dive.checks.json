@@ -1,0 +1,59 @@
+{
+  "checks": [
+    { "id": "m24-dd-file-exists", "describe": "deep-dive.md exists for M24",
+      "run": "test -f site/docs/m24-cloud-governance-audit/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m24-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-dd-has-purity-grep-proof", "describe": "deep dive shows the exact grep command proving zero write-mode AWS calls",
+      "run": "grep -Fc '(put_|delete_|create_|modify_)' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m24-dd-purity-proof-exits-1", "describe": "the purity grep proof's expected output shows exit=1 (zero matches)",
+      "run": "grep -c 'exit=1' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-has-evaluate-policy-client-proof", "describe": "deep dive shows evaluate_policy() never references a client at all, not just avoids write calls",
+      "run": "grep -c 'evaluate_policy' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-has-expiry-demo", "describe": "deep dive proves suppression/expiry with a real-dates script, not just described",
+      "run": "grep -c 'm24_expiry_demo.py' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-expiry-demo-shows-both-outcomes", "describe": "expiry demo output shows both suppressed=True and suppressed=False side by side",
+      "run": "grep -c 'suppressed=True' site/docs/m24-cloud-governance-audit/deep-dive.md; grep -c 'suppressed=False' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "contains": "1\n1" }, "weight": 4 },
+
+    { "id": "m24-dd-has-point-in-time-warning", "describe": "the expiry demo carries a point-in-time warning since it uses the real current date",
+      "run": "grep -c ':::warning\\[This output is point-in-time\\]' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-dd-has-evidence-vs-response-demo", "describe": "deep dive shows a finding's evidence next to the raw API response that produced it",
+      "run": "grep -c 'm24_evidence_demo.py' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-shows-raw-sse-algorithm", "describe": "the evidence demo's expected output shows the real raw SSEAlgorithm value from get_bucket_encryption()",
+      "run": "grep -c 'AES256' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-shows-kms-key-evidence-string", "describe": "the evidence demo's expected output shows the resulting Finding.evidence string, not just a boolean",
+      "run": "grep -c 'not using a customer-managed KMS key' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m24-dd-version-reference", "describe": "deep dive's prerequisite check references v1.9.0",
+      "run": "grep -c 'platformops 1.9.0' site/docs/m24-cloud-governance-audit/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

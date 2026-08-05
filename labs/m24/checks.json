@@ -1,0 +1,159 @@
+{
+  "checks": [
+    { "id": "m24-module-exists", "describe": "cloudaudit.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m24-policy-example-exists", "describe": "policy.example.yaml exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v1.9.0/policy.example.yaml && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m24-policy-example-has-rules-and-exceptions", "describe": "policy.example.yaml has both a rules list and an exceptions list",
+      "run": "grep -c '^rules:' labs/checkpoints/v1.9.0/policy.example.yaml; grep -c '^exceptions:' labs/checkpoints/v1.9.0/policy.example.yaml",
+      "assert": { "contains": "1\n1" }, "weight": 2 },
+
+    { "id": "m24-has-resource-evidence", "describe": "ResourceEvidence dataclass is defined",
+      "run": "grep -c 'class ResourceEvidence' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-resource-evidence-composes-not-extends", "describe": "ResourceEvidence wraps a ResourceRecord via from_record(), it does not modify ResourceRecord itself",
+      "run": "grep -c 'def from_record(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-multiregion-untouched", "describe": "multiregion.py's ResourceRecord was never extended with audit-only fields",
+      "run": "grep -c 'encrypted\\|public\\|created_at' labs/checkpoints/v1.9.0/src/platformops/multiregion.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m24-has-finding-dataclass", "describe": "Finding dataclass is defined",
+      "run": "grep -c 'class Finding' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-finding-has-severity-and-evidence", "describe": "Finding carries severity and evidence fields, not just a bare pass/fail",
+      "run": "grep -c '    severity: str' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py; grep -c '    evidence: str' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "contains": "1\n1" }, "weight": 3 },
+
+    { "id": "m24-finding-has-suppression-fields", "describe": "Finding carries suppressed and suppression_reason, so a suppressed finding is never silently dropped",
+      "run": "grep -c 'suppressed: bool = False' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py; grep -c 'suppression_reason: str | None = None' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "contains": "1\n1" }, "weight": 4 },
+
+    { "id": "m24-has-evaluate-policy", "describe": "evaluate_policy() -- the detection function -- is defined",
+      "run": "grep -c 'def evaluate_policy(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-evaluate-policy-is-pure-no-client-reference", "describe": "evaluate_policy() never references a client -- proof it makes no network call",
+      "run": "awk '/^def evaluate_policy\\(/{p=1} p{print} /^def build_report\\(/{exit}' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py | grep -c 'client'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m24-no-write-mode-aws-calls-anywhere", "describe": "no put_*/delete_*/create_*/modify_* call against a client anywhere in the module -- detection-only, mechanically proven",
+      "run": "grep -cE 'client\\.(put_|delete_|create_|modify_)' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m24-has-required-tags-check", "describe": "required_tags check is defined",
+      "run": "grep -c 'def _check_required_tags(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-has-approved-regions-check", "describe": "approved_regions check is defined",
+      "run": "grep -c 'def _check_approved_regions(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-has-max-age-days-check", "describe": "max_age_days check is defined",
+      "run": "grep -c 'def _check_max_age_days(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-has-require-encryption-check", "describe": "require_encryption check is defined",
+      "run": "grep -c 'def _check_require_encryption(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-has-no-public-exposure-check", "describe": "no_public_exposure check is defined",
+      "run": "grep -c 'def _check_no_public_exposure(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-checks-registry-has-all-five", "describe": "CHECKS dict registers all five built-in checks",
+      "run": "grep -A6 '^CHECKS = {' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py | grep -cE '\"(required_tags|approved_regions|max_age_days|require_encryption|no_public_exposure)\":'",
+      "assert": { "matches": "^5$" }, "weight": 3 },
+
+    { "id": "m24-encryption-check-is-kms-specific-not-bare-encrypted", "describe": "require-encryption evidence names a customer-managed KMS key, not a bare 'encrypted' boolean -- since real S3 buckets already have SSE-S3 by default",
+      "run": "grep -c 'customer-managed KMS key' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m24-has-applies-to-handling", "describe": "evaluate_policy() honors an optional applies_to field on a rule",
+      "run": "grep -c \"rule.get(.applies_to.)\" labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-has-exception-expiry-check", "describe": "_exception_is_active() checks an exception's expires date, not just whether one exists",
+      "run": "grep -c 'def _exception_is_active(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m24-exception-expiry-uses-real-date-comparison", "describe": "exception expiry is compared against now.date(), not just checked for presence",
+      "run": "grep -c 'now.date() <= expiry.date()' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m24-has-build-report", "describe": "build_report() summarizes findings by severity and suppression state",
+      "run": "grep -c 'def build_report(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-report-tracks-active-and-suppressed-separately", "describe": "build_report()'s summary distinguishes active from suppressed counts",
+      "run": "grep -c '\"active\": len(active)' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py; grep -c '\"suppressed\": len(suppressed)' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "contains": "1\n1" }, "weight": 3 },
+
+    { "id": "m24-has-gather-bucket-evidence", "describe": "gather_bucket_evidence() -- the network-touching evidence gatherer -- is defined",
+      "run": "grep -c 'def gather_bucket_evidence(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-gather-evidence-calls-list-buckets-once", "describe": "gather_bucket_evidence() calls list_buckets() once, account-wide, not once per bucket",
+      "run": "grep -c 'client.list_buckets()' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-has-run-cloud-audit", "describe": "run_cloud_audit() -- the one call the CLI needs -- is defined",
+      "run": "grep -c 'def run_cloud_audit(' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-reuses-load-yaml-dict", "describe": "policy loading reuses config.load_yaml_dict(), no second YAML loader",
+      "run": "grep -c 'from platformops.config import load_yaml_dict' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-reuses-list-s3-buckets", "describe": "evidence gathering reuses multiregion.list_s3_buckets(), it does not re-implement bucket discovery",
+      "run": "grep -c 'from platformops.multiregion import' labs/checkpoints/v1.9.0/src/platformops/cloudaudit.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-cli-has-cloud-audit-command", "describe": "cloud-audit CLI command is wired",
+      "run": "grep -c '@app.command(\"cloud-audit\")' labs/checkpoints/v1.9.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-cli-has-findings-list-command", "describe": "findings-list CLI command is wired",
+      "run": "grep -c '@app.command(\"findings-list\")' labs/checkpoints/v1.9.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-cli-has-findings-show-command", "describe": "findings-show CLI command is wired",
+      "run": "grep -c '@app.command(\"findings-show\")' labs/checkpoints/v1.9.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m24-version-bumped", "describe": "pyproject.toml version is 1.9.0",
+      "run": "grep -c 'version = \"1.9.0\"' labs/checkpoints/v1.9.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-changelog-has-entry", "describe": "CHANGELOG.md has a [1.9.0] entry",
+      "run": "grep -c '## \\[1.9.0\\]' labs/checkpoints/v1.9.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-lab-teardown-does-not-instruct-floci-stop", "describe": "the lab's Teardown never tells the learner to run floci stop",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m24-cloud-governance-audit/lab.md | grep -c '^floci stop'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m24-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m24-cloud-governance-audit/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m24-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '## Common pitfalls' site/docs/m24-cloud-governance-audit/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m24-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m24-cloud-governance-audit/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m24-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m24-cloud-governance-audit/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}
