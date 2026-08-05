@@ -1,0 +1,38 @@
+# Example remediation config -- platformops remediate-plan/remediate-execute read a file shaped
+# like this.
+#
+# `allowlist` is the second, independent safety gate (the first is
+# `--approve`). Only a rule_id listed here is ever remediated -- even if
+# cloudremediate.py has a planner function that COULD fix it, and even when
+# `--approve` is passed. A rule left off this list always comes back
+# `not_supported`, on every run, no exceptions.
+allowlist:
+  - required-tags
+  - require-encryption
+  - no-public-exposure
+
+# Per-rule remediation policy -- only read for a rule_id that is also on the
+# allowlist above. A `policies` entry for a rule not on the allowlist changes
+# nothing.
+policies:
+  required-tags:
+    # Tags added when a required tag is missing. A placeholder value, not a
+    # real ownership decision -- someone still has to go correct it by hand,
+    # but the bucket is no longer sitting in an "untagged" state a security
+    # scan would flag.
+    defaults:
+      team_owner: platform-unassigned
+      environment: unassigned
+
+  require-encryption:
+    # The customer-managed KMS key a remediated bucket's default encryption
+    # is switched to.
+    kms_key_id: alias/platformops-remediation-demo
+
+# Where every executed remediation's audit-log line is appended -- this file
+# IS the rollback record (see the Deep Dive). Relative paths resolve against
+# the current working directory the CLI is run from.
+audit_log_path: remediation-audit.jsonl
+
+batch:
+  default_cap: 5

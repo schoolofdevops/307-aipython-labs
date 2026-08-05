@@ -1,0 +1,103 @@
+{
+  "checks": [
+    { "id": "m26-releasecheck-module-exists", "describe": "releasecheck.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.1.0/src/platformops/releasecheck.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m26-httpclient-has-five-new-endpoints", "describe": "httpclient.py defines all five new GitHub endpoint functions",
+      "run": "grep -c '^def get_pull_request(\\|^def list_check_runs(\\|^def list_artifacts(\\|^def get_latest_release(\\|^def list_deployments(' labs/checkpoints/v2.1.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^5$" }, "weight": 4 },
+
+    { "id": "m26-httpclient-has-pydantic-models", "describe": "the five new endpoints validate responses through Pydantic models",
+      "run": "grep -c 'class PullRequestInfo(BaseModel)\\|class CheckRun(BaseModel)\\|class Artifact(BaseModel)\\|class ReleaseInfo(BaseModel)\\|class Deployment(BaseModel)' labs/checkpoints/v2.1.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^5$" }, "weight": 3 },
+
+    { "id": "m26-get-latest-release-handles-404-as-real-answer", "describe": "get_latest_release docstring documents 404 as a real, expected outcome (no releases yet)",
+      "run": "awk '/^def get_latest_release\\(/{p=1} p{print} /^def list_deployments\\(/{exit}' labs/checkpoints/v2.1.0/src/platformops/httpclient.py | grep -c '404'",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m26-has-release-readiness-report", "describe": "ReleaseReadinessReport dataclass is defined",
+      "run": "grep -c 'class ReleaseReadinessReport' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-has-all-six-gather-functions", "describe": "all six gather_*_evidence fetch functions are defined",
+      "run": "grep -cE '^def gather_(pr|ci|check_runs|artifact|release|deployment)_evidence\\(' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py",
+      "assert": { "matches": "^6$" }, "weight": 4 },
+
+    { "id": "m26-has-evaluate-release-readiness", "describe": "evaluate_release_readiness() -- the pure aggregation function -- is defined",
+      "run": "grep -c 'def evaluate_release_readiness(' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m26-fetch-functions-have-no-verdict-words", "describe": "the six gather_*_evidence functions never contain the words ready/pass/fail -- fetch never judges, mechanically proven",
+      "run": "awk '/^def gather_pr_evidence\\(/{p=1} /^class ReleaseReadinessReport:/{exit} p' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py | grep -icE '\"ready\"|\"pass\"|\"fail\"'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m26-aggregate-function-never-calls-gather-or-httpx", "describe": "evaluate_release_readiness() never imports httpx and never calls a gather_* function",
+      "run": "awk '/^def evaluate_release_readiness\\(/{p=1} /^def run_release_check\\(/{exit} p' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py | grep -cE 'httpx|gather_'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m26-module-never-imports-httpx-at-all", "describe": "releasecheck.py never imports httpx anywhere in the file -- the aggregate side cannot reach the network even if edited",
+      "run": "grep -cE '^import httpx|^from httpx' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m26-degrades-honestly-sources-failed", "describe": "evaluate_release_readiness() tracks sources_failed, the honest-degradation record",
+      "run": "grep -c 'sources_failed' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m26-release-section-is-informational-only", "describe": "the release section is excluded from the gating_sections list that decides the verdict",
+      "run": "grep -c 'gating_sections = \\[' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m26-cli-has-release-check-command", "describe": "release-check CLI command is wired",
+      "run": "grep -c '@app.command(\"release-check\")' labs/checkpoints/v2.1.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m26-cli-reads-token-from-environment", "describe": "the CLI reads GITHUB_TOKEN from the environment, never a hardcoded literal",
+      "run": "grep -c \"os.environ.get(.GITHUB_TOKEN.)\" labs/checkpoints/v2.1.0/src/platformops/cli.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m26-fixtures-directory-exists", "describe": "the GitHub fixtures directory exists in the checkpoint",
+      "run": "test -d labs/checkpoints/v2.1.0/tests/fixtures/github && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m26-fixtures-cover-pass-and-fail-scenarios", "describe": "fixtures include both a merged PR and a blocked/pending one",
+      "run": "test -f labs/checkpoints/v2.1.0/tests/fixtures/github/pr_approved.json && test -f labs/checkpoints/v2.1.0/tests/fixtures/github/pr_pending.json && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m26-no-aws-references-in-releasecheck", "describe": "releasecheck.py never references AWS/Floci -- this module does not touch cloud state",
+      "run": "grep -icE 'boto3|floci|AWS_ENDPOINT_URL|aws_access_key' labs/checkpoints/v2.1.0/src/platformops/releasecheck.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m26-tests-file-exists", "describe": "tests/test_releasecheck.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.1.0/tests/test_releasecheck.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m26-version-bumped", "describe": "pyproject.toml version is 2.1.0",
+      "run": "grep -c 'version = \"2.1.0\"' labs/checkpoints/v2.1.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-changelog-has-entry", "describe": "CHANGELOG.md has a [2.1.0] entry",
+      "run": "grep -c '## \\[2.1.0\\]' labs/checkpoints/v2.1.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m26-cicd-automation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m26-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '## Common pitfalls' site/docs/m26-cicd-automation/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-lab-teardown-has-no-external-state", "describe": "the lab's Teardown never tells the learner to stop Floci or a container -- this module starts none",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m26-cicd-automation/lab.md | grep -c '^floci stop\\|docker stop\\|docker rm'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m26-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m26-cicd-automation/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m26-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m26-cicd-automation/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

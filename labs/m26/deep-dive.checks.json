@@ -1,0 +1,67 @@
+{
+  "checks": [
+    { "id": "m26-dd-file-exists", "describe": "deep-dive.md exists for M26",
+      "run": "test -f site/docs/m26-cicd-automation/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m26-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-dd-has-mermaid-diagram", "describe": "deep dive has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m26-dd-has-fetch-purity-grep-proof", "describe": "deep dive shows the exact grep command proving fetch functions carry no verdict words",
+      "run": "grep -Fc 'class ReleaseReadinessReport:' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m26-dd-has-aggregate-purity-grep-proof", "describe": "deep dive shows the exact grep command proving the aggregate function makes no network call",
+      "run": "grep -Fc 'httpx|gather_' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m26-dd-purity-proofs-show-exit-1", "describe": "the purity grep proofs' expected output shows exit=1 (zero matches) at least twice",
+      "run": "grep -c 'exit=1' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m26-dd-has-degraded-source-demo", "describe": "deep dive proves honest degradation with a real simulated outage script",
+      "run": "grep -c 'm26_degraded_source_demo.py' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m26-dd-degraded-demo-shows-not-ready-verdict", "describe": "the degraded-source demo's expected output shows the verdict actually landed at not_ready",
+      "run": "grep -c 'verdict: not_ready' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m26-dd-degraded-demo-shows-sources-failed", "describe": "the degraded-source demo's expected output shows sources_failed naming the unreachable source",
+      "run": "grep -c \"sources_failed: \\['checks'\\]\" site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m26-dd-has-fixtures-vs-live-contrast", "describe": "deep dive explicitly contrasts this lab's fixtures against Module 9's live-call approach",
+      "run": "grep -ic 'Module 9' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m26-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m26-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a concrete Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m26-dd-version-reference", "describe": "deep dive's prerequisite check references v2.1.0",
+      "run": "grep -c 'platformops 2.1.0' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m26-dd-has-teardown", "describe": "deep dive has its own Teardown section removing only what it seeded",
+      "run": "grep -c '^## Teardown' site/docs/m26-cicd-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
