@@ -1,0 +1,37 @@
+# A perfectly healthy, perfectly restart-worthy-looking Deployment -- on
+# purpose. billing is NOT on k8s-ops.example.yaml's namespace_allowlist, so
+# this module's lab restarts billing-invoices to prove the allowlist gate
+# refuses regardless of workload health, not just for broken workloads.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-invoices
+  namespace: billing
+  labels:
+    app: billing-invoices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: billing-invoices
+  template:
+    metadata:
+      labels:
+        app: billing-invoices
+    spec:
+      containers:
+        - name: billing-invoices
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep 3600"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "true"]
+            initialDelaySeconds: 2
+            periodSeconds: 5

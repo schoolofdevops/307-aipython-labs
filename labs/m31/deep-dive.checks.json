@@ -1,0 +1,63 @@
+{
+  "checks": [
+    { "id": "m31-dd-file-exists", "describe": "deep-dive.md exists for M31",
+      "run": "test -f site/docs/m31-incident-context/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m31-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-dd-has-mermaid-diagram", "describe": "deep dive has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m31-dd-has-fetch-purity-grep-proof", "describe": "deep dive shows the grep command proving fetch functions never set a status key",
+      "run": "grep -Fc 'gather_service_evidence' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m31-dd-has-aggregate-purity-grep-proof", "describe": "deep dive shows the grep command proving evaluate_incident_context makes no I/O call",
+      "run": "grep -Fc 'evaluate_incident_context(' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m31-dd-purity-proofs-show-exit-1", "describe": "the purity grep proofs' expected output shows exit=1 (zero matches) at least three times",
+      "run": "grep -c 'exit=1' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m31-dd-has-three-kubernetes-states-demo", "describe": "deep dive proves the UNKNOWN vs not_found vs unavailable distinction with a live script",
+      "run": "grep -c 'm31_three_kubernetes_states.py' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m31-dd-three-states-demo-shows-all-three-statuses", "describe": "the three-states demo's expected output shows UNKNOWN, not_found and unavailable",
+      "run": "grep -Ec \"'status': 'UNKNOWN'|'status': 'not_found'|'status': 'unavailable'\" site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^3$" }, "weight": 4 },
+
+    { "id": "m31-dd-has-exhaustive-readonly-proof", "describe": "deep dive extends the read-only proof across all six composed systems' mutating functions",
+      "run": "grep -c 'restart_execute|execute_remediation|build_remediation_plan' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m31-dd-has-no-import-proof", "describe": "deep dive proves the module never imports any write-capable module by name",
+      "run": "grep -c 'kubernetes_restart|cloudremediate|workqueue|reportstore' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m31-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a concrete Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m31-dd-version-reference", "describe": "deep dive's prerequisite check references v2.6.0",
+      "run": "grep -c 'platformops 2.6.0' site/docs/m31-incident-context/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

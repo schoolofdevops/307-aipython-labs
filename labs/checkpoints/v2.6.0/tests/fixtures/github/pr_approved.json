@@ -1,0 +1,11 @@
+{
+  "number": 482,
+  "state": "closed",
+  "draft": false,
+  "merged": true,
+  "mergeable_state": "unknown",
+  "title": "Add retry budget to the payments webhook consumer",
+  "html_url": "https://github.com/acme-platform/payments/pull/482",
+  "head": { "ref": "retry-budget", "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678" },
+  "base": { "ref": "main", "sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f001234567" }
+}

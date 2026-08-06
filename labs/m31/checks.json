@@ -1,0 +1,83 @@
+{
+  "checks": [
+    { "id": "m31-incidentcontext-module-exists", "describe": "incidentcontext.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m31-has-all-seven-gather-functions", "describe": "all seven gather_*_evidence fetch functions are defined",
+      "run": "grep -cE '^def gather_(service|source|ci|kubernetes|cloud|observability|runbook)_evidence\\(' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py",
+      "assert": { "matches": "^7$" }, "weight": 5 },
+
+    { "id": "m31-has-evaluate-incident-context", "describe": "evaluate_incident_context() -- the pure aggregation function -- is defined",
+      "run": "grep -c 'def evaluate_incident_context(' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m31-has-collect-incident-context-orchestrator", "describe": "collect_incident_context() -- the one call a CLI command needs -- is defined",
+      "run": "grep -c 'def collect_incident_context(' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m31-has-build-timeline", "describe": "build_timeline() merges real timestamps into one time-ordered list",
+      "run": "grep -c 'def build_timeline(' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-report-dataclass-has-seven-sections", "describe": "IncidentContextReport carries all seven section fields plus the source-completeness lists",
+      "run": "grep -cE 'ownership:|source_changes:|kubernetes:|observability:|runbook:|sources_ok:|sources_failed:' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py",
+      "assert": { "matches": "^[7-9]|^1[0-9]" }, "weight": 3 },
+
+    { "id": "m31-module-never-imports-subprocess-httpx-boto3-or-raw-yaml", "describe": "incidentcontext.py imports no subprocess, httpx, boto3, kubernetes.client API call or raw yaml -- only adapters",
+      "run": "grep -cE '^import subprocess|^import httpx|^import boto3|^import yaml' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m31-module-makes-no-mutating-call", "describe": "incidentcontext.py never calls a restart, remediation, patch, delete, create or replace function -- read-only, proven by grep",
+      "run": "grep -cE 'restart_execute|execute_remediation|patch_namespaced|delete_namespaced|create_namespaced|replace_namespaced|\\.put_object|\\.delete_object|\\.create_bucket|\\.delete_bucket' labs/checkpoints/v2.6.0/src/platformops/incidentcontext.py; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m31-local-ops-has-git-log-detailed", "describe": "local_ops.py defines git_log_detailed() with structured commit records",
+      "run": "grep -c 'def git_log_detailed(' labs/checkpoints/v2.6.0/src/platformops/local_ops.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-httpclient-workflow-runs-has-created-at", "describe": "list_workflow_runs() now returns each run's created_at field",
+      "run": "grep -c '\"created_at\": run.get(\"created_at\")' labs/checkpoints/v2.6.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-cli-has-incident-collect-command", "describe": "the incident-collect command is wired into cli.py",
+      "run": "grep -c '@app.command(\"incident-collect\")' labs/checkpoints/v2.6.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m31-incident-registry-example-exists", "describe": "incident.example.yaml exists with a services key",
+      "run": "test -f labs/checkpoints/v2.6.0/incident.example.yaml && grep -c '^services:' labs/checkpoints/v2.6.0/incident.example.yaml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-service-payments-fixture-exists", "describe": "service-payments.yaml exists for the payments service used by the lab",
+      "run": "test -f labs/checkpoints/v2.6.0/service-payments.yaml && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 1 },
+
+    { "id": "m31-test-file-exists-with-substantial-coverage", "describe": "test_incidentcontext.py exists with at least 20 test functions",
+      "run": "grep -c '^def test_' labs/checkpoints/v2.6.0/tests/test_incidentcontext.py",
+      "assert": { "matches": "^(2[0-9]|[3-9][0-9])" }, "weight": 3 },
+
+    { "id": "m31-full-suite-passes", "describe": "the full pytest suite passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.6.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 6 },
+
+    { "id": "m31-ruff-check-clean", "describe": "ruff check passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.6.0 && uv run ruff check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "All checks passed" }, "weight": 3 },
+
+    { "id": "m31-ruff-format-clean", "describe": "ruff format --check passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.6.0 && uv run ruff format --check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "formatted" }, "weight": 3 },
+
+    { "id": "m31-mypy-clean", "describe": "mypy passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.6.0 && uv run mypy src/ 2>&1 | tail -1",
+      "assert": { "contains": "Success" }, "weight": 3 },
+
+    { "id": "m31-version-bumped", "describe": "pyproject.toml is bumped to 2.6.0",
+      "run": "grep -c 'version = \"2.6.0\"' labs/checkpoints/v2.6.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m31-changelog-has-entry", "describe": "CHANGELOG.md documents the 2.6.0 release",
+      "run": "grep -c '## \\[2.6.0\\] - Incident Context Collector' labs/checkpoints/v2.6.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
