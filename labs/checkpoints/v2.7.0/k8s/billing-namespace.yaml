@@ -1,0 +1,9 @@
+# A second namespace, deliberately left OFF k8s-ops.example.yaml's
+# namespace_allowlist. billing-invoices lives here so the lab can prove the
+# namespace-allowlist gate refuses a restart before it even reads the
+# Deployment -- regardless of --approve, and regardless of whether the
+# workload is healthy or broken.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: billing

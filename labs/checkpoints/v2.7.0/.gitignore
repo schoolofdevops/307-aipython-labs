@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Generated resolved config -- output of `platformops.config`, not source
+*.resolved.yaml
+
+# Remediation audit log -- a runtime artifact written by
+# `remediate-execute`/`remediate-execute-batch`, not source (Module 25)
+remediation-audit.jsonl

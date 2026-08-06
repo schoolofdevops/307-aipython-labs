@@ -1,0 +1,40 @@
+# A least-privilege identity for the workload inspector: get/list/watch on
+# exactly the three object kinds it reads (deployments, pods, events) in
+# exactly one namespace -- nothing else. This is the identity a real
+# monitoring or on-call tool should run as: it can never create, patch,
+# delete or replace anything, even if a bug or a compromised dependency
+# tried to make it. See the Deep Dive for a live proof that even a
+# deliberate write attempt with this identity is refused by the API server
+# itself, not just by this module's own code.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payments-inspector
+  namespace: payments
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: payments-inspector-role
+  namespace: payments
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payments-inspector-binding
+  namespace: payments
+subjects:
+  - kind: ServiceAccount
+    name: payments-inspector
+    namespace: payments
+roleRef:
+  kind: Role
+  name: payments-inspector-role
+  apiGroup: rbac.authorization.k8s.io

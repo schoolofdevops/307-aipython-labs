@@ -1,0 +1,14 @@
+# The ConfigMap checkout-web.yaml's env var needs. Applied on purpose AFTER
+# checkout-web.yaml in this module's lab, once the CreateContainerConfigError
+# state has been observed for real -- creating this ConfigMap alone does
+# NOT recover the two Pods already stuck in that state (their container
+# creation attempt was already using the old, missing-key world when it
+# last failed); the governed restart is what forces new Pods that pick up
+# the now-fixed ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-web-config
+  namespace: checkout
+data:
+  FEATURE_FLAGS: "checkout-v2=on"

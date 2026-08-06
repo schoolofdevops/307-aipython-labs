@@ -1,0 +1,31 @@
+# Scenario 2: ImagePullBackOff. The image tag simply does not exist on
+# Docker Hub, so every pull attempt fails -- kubelet reports
+# waiting.reason == "ErrImagePullBackOff" (shown as "ImagePullBackOff" once
+# it has failed enough times to back off) on the container status.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: payments
+  labels:
+    app: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments
+  template:
+    metadata:
+      labels:
+        app: payments
+    spec:
+      containers:
+        - name: payments
+          image: busybox:this-tag-does-not-exist-m28
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

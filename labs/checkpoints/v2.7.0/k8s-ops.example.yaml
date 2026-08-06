@@ -1,0 +1,31 @@
+# Example governed-operations config -- platformops restart-plan/restart-execute read a file
+# shaped like this.
+#
+# `namespace_allowlist` is the first, independent safety gate (the second is
+# `--approve`). A restart is only ever attempted in a namespace listed here --
+# even with `--approve`, even for a Deployment that genuinely needs it. A
+# namespace left off this list always comes back `not_allowed`, on every run,
+# no exceptions.
+namespace_allowlist:
+  - checkout
+
+# How long, in seconds, this tool refuses to restart the SAME Deployment
+# again after a restart it already carried out. This is the loop guard: an
+# agent (or a script, or a person in a retry loop) that calls
+# restart-execute --approve twice in a row against the same namespace/name
+# gets refused on the second call, not a second real rollout. Read from the
+# audit log's own history -- not from in-memory state -- so the guard holds
+# even across separate CLI invocations.
+cooldown_seconds: 120
+
+# How long restart-execute waits, after triggering a rollout, for the
+# Deployment to report every replica ready and updated before giving up and
+# reporting rollout_outcome: timed_out. A Deployment stuck on a permanently
+# bad image (ImagePullBackOff) will hit this every time -- the restart still
+# happens, but the tool is honest that it did not fix anything.
+rollout_timeout_seconds: 60
+rollout_poll_interval_seconds: 2
+
+# Where every real restart's audit-log line is appended -- this file is also
+# what the cooldown gate reads to find the last restart for a given target.
+audit_log_path: k8s-ops-audit.jsonl

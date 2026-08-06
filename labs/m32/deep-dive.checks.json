@@ -1,0 +1,59 @@
+{
+  "checks": [
+    { "id": "m32-dd-file-exists", "describe": "deep-dive.md exists for M32",
+      "run": "test -f site/docs/m32-internal-platform-api/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m32-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-dd-has-mermaid-diagram", "describe": "deep dive has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m32-dd-has-reuse-contract-grep-proof", "describe": "deep dive shows the grep proving api.py imports no adapter library directly",
+      "run": "grep -Fc \"grep -E '^import (boto3|httpx)\" site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m32-dd-has-plan-only-grep-proof", "describe": "deep dive shows the grep proving execute_remediation_plan/batch are never imported",
+      "run": "grep -Fc 'execute_remediation_plan|execute_remediation_batch' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m32-dd-purity-proofs-show-exit-1", "describe": "the reuse/plan-only grep proofs' expected output shows exit=1 (zero matches) at least twice",
+      "run": "grep -c 'exit=1' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m32-dd-has-auth-before-body-demo", "describe": "deep dive proves auth is checked before body validation with a live 401-vs-422 comparison",
+      "run": "grep -c 'HTTP 422' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m32-dd-auth-demo-shows-both-outcomes", "describe": "the auth-ordering demo's expected output shows both HTTP 422 and HTTP 401",
+      "run": "grep -Ec '^HTTP 422$|^HTTP 401$' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 4 },
+
+    { "id": "m32-dd-has-unconditional-audit-proof", "describe": "deep dive proves the audit log records both a 422 and a 401 outcome for the same caller/anonymous split",
+      "run": "grep -c '\"caller\": \"ci-bot\", \"status_code\": 422' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m32-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a concrete Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[2-9]" }, "weight": 3 },
+
+    { "id": "m32-dd-version-reference", "describe": "deep dive's prerequisite check references v2.7.0",
+      "run": "grep -c 'platformops 2.7.0' site/docs/m32-internal-platform-api/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

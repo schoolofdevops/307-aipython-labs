@@ -1,0 +1,103 @@
+{
+  "checks": [
+    { "id": "m32-api-module-exists", "describe": "api.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.7.0/src/platformops/api.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m32-has-create-app", "describe": "create_app() -- the app factory -- is defined",
+      "run": "grep -c 'def create_app(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-has-require-api-key", "describe": "require_api_key() -- the X-API-Key gate dependency -- is defined",
+      "run": "grep -c 'def require_api_key(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-has-audit-middleware", "describe": "_audit_middleware() records every request",
+      "run": "grep -c 'async def _audit_middleware(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-has-all-five-routes", "describe": "all five routes are wired -- health, services/validate, release-readiness, incident-context, remediations/plan",
+      "run": "grep -cE '@app\\.(get|post)\\(\"/(health|services/validate|release-readiness|incident-context|remediations/plan)\"' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^5$" }, "weight": 6 },
+
+    { "id": "m32-health-route-has-no-auth-dependency", "describe": "GET /health's handler takes no RequireApiKey parameter -- the one deliberate exception",
+      "run": "awk '/def health\\(\\)/{print; exit}' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "contains": "def health() -> HealthResponse:" }, "weight": 3 },
+
+    { "id": "m32-thin-wrapper-calls-validate-service", "describe": "services_validate() calls the same validate_service() the CLI's validate command calls",
+      "run": "grep -c 'result = validate_service(data)' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-thin-wrapper-calls-run-release-check", "describe": "release_readiness() calls the same run_release_check() the CLI's release-check command calls",
+      "run": "grep -c 'report = run_release_check(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-thin-wrapper-calls-collect-incident-context", "describe": "incident_context() calls the same collect_incident_context() the CLI's incident-collect command calls",
+      "run": "grep -c 'report = collect_incident_context(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-thin-wrapper-calls-build-remediation-plan", "describe": "remediations_plan() calls the same build_remediation_plan() the CLI's remediate-plan command calls",
+      "run": "grep -c 'plan = build_remediation_plan(' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-module-never-imports-boto3-httpx-kubernetes-directly", "describe": "api.py imports no adapter library directly -- only already-tested platformops functions",
+      "run": "grep -cE '^import (boto3|httpx)$|^from (boto3|httpx|kubernetes)' labs/checkpoints/v2.7.0/src/platformops/api.py; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m32-module-never-imports-execute-remediation", "describe": "api.py never imports execute_remediation_plan or execute_remediation_batch -- POST /remediations/plan is plan-only by construction",
+      "run": "grep -cE '^\\s*(execute_remediation_plan|execute_remediation_batch),?\\s*$' labs/checkpoints/v2.7.0/src/platformops/api.py; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m32-no-remediations-execute-route", "describe": "there is no /remediations/execute route decorator anywhere in api.py",
+      "run": "grep -cE '@app\\.(get|post)\\(\"/remediations/execute\"' labs/checkpoints/v2.7.0/src/platformops/api.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m32-reuses-append-audit-log", "describe": "the audit log reuses cloudremediate.append_audit_log() rather than a new logging function",
+      "run": "grep -c 'from platformops.cloudremediate import' labs/checkpoints/v2.7.0/src/platformops/api.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-uses-lifespan-not-on-event", "describe": "the app uses the current lifespan pattern, not the deprecated @app.on_event() decorator",
+      "run": "grep -cE '^\\s*@app\\.on_event' labs/checkpoints/v2.7.0/src/platformops/api.py; true",
+      "assert": { "matches": "^0$" }, "weight": 2 },
+
+    { "id": "m32-cli-has-api-serve-command", "describe": "the api-serve command is wired into cli.py",
+      "run": "grep -c '@app.command(\"api-serve\")' labs/checkpoints/v2.7.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m32-api-keys-example-exists", "describe": "api-keys.example.yaml exists with a keys mapping",
+      "run": "test -f labs/checkpoints/v2.7.0/api-keys.example.yaml && grep -c '^keys:' labs/checkpoints/v2.7.0/api-keys.example.yaml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-test-file-exists-with-substantial-coverage", "describe": "test_api.py exists with at least 15 test functions",
+      "run": "grep -c '^def test_' labs/checkpoints/v2.7.0/tests/test_api.py",
+      "assert": { "matches": "^(1[5-9]|[2-9][0-9])" }, "weight": 3 },
+
+    { "id": "m32-test-proves-no-execute-import", "describe": "a test asserts api.py has no execute_remediation_plan/batch attribute",
+      "run": "grep -c 'not hasattr(api_module, \"execute_remediation' labs/checkpoints/v2.7.0/tests/test_api.py",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m32-full-suite-passes", "describe": "the full pytest suite passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.7.0 && uv run pytest -q 2>&1 | tail -1",
+      "assert": { "contains": "passed" }, "weight": 6 },
+
+    { "id": "m32-ruff-check-clean", "describe": "ruff check passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.7.0 && uv run ruff check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "All checks passed" }, "weight": 3 },
+
+    { "id": "m32-ruff-format-clean", "describe": "ruff format --check passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.7.0 && uv run ruff format --check src/ tests/ 2>&1 | tail -1",
+      "assert": { "contains": "formatted" }, "weight": 3 },
+
+    { "id": "m32-mypy-clean", "describe": "mypy passes against the frozen checkpoint",
+      "run": "cd labs/checkpoints/v2.7.0 && uv run mypy src/ 2>&1 | tail -1",
+      "assert": { "contains": "Success" }, "weight": 3 },
+
+    { "id": "m32-version-bumped", "describe": "pyproject.toml is bumped to 2.7.0",
+      "run": "grep -c 'version = \"2.7.0\"' labs/checkpoints/v2.7.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m32-changelog-has-entry", "describe": "CHANGELOG.md documents the 2.7.0 release",
+      "run": "grep -c '## \\[2.7.0\\] - PlatformOps Internal API' labs/checkpoints/v2.7.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}
