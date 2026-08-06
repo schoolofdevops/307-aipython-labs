@@ -1,0 +1,127 @@
+{
+  "checks": [
+    { "id": "m30-telemetry-module-exists", "describe": "telemetry.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.5.0/src/platformops/telemetry.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m30-observability-module-exists", "describe": "observability.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.5.0/src/platformops/observability.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m30-httpclient-has-three-new-endpoints", "describe": "httpclient.py defines all three new observability endpoint functions",
+      "run": "grep -c '^def query_metrics(\\|^def search_logs(\\|^def list_alerts(' labs/checkpoints/v2.5.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^3$" }, "weight": 4 },
+
+    { "id": "m30-httpclient-endpoints-have-pydantic-models", "describe": "the three new endpoints validate responses through Pydantic models",
+      "run": "grep -c 'class MetricQueryResponse(BaseModel)\\|class LogSearchResponse(BaseModel)\\|class Alert(BaseModel)' labs/checkpoints/v2.5.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^3$" }, "weight": 3 },
+
+    { "id": "m30-request-with-retry-accepts-params", "describe": "_request_with_retry() accepts an optional params argument",
+      "run": "grep -c 'params: dict\\[str, Any\\] | None = None' labs/checkpoints/v2.5.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m30-telemetry-has-correlation-id-generator", "describe": "new_correlation_id() is defined",
+      "run": "grep -c 'def new_correlation_id(' labs/checkpoints/v2.5.0/src/platformops/telemetry.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-telemetry-has-traced-operation", "describe": "traced_operation() is defined as a context manager",
+      "run": "grep -c 'def traced_operation(' labs/checkpoints/v2.5.0/src/platformops/telemetry.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m30-telemetry-has-json-formatter", "describe": "a JSON log formatter is defined",
+      "run": "grep -c 'class _JsonFormatter' labs/checkpoints/v2.5.0/src/platformops/telemetry.py",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-telemetry-uses-contextvar-for-correlation-id", "describe": "the correlation ID lives in a contextvars.ContextVar, not a plain global",
+      "run": "grep -c 'contextvars.ContextVar' labs/checkpoints/v2.5.0/src/platformops/telemetry.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m30-configure-tracing-is-idempotent", "describe": "configure_tracing() checks for an already-installed TracerProvider before installing a new one",
+      "run": "grep -c 'isinstance(current, TracerProvider)' labs/checkpoints/v2.5.0/src/platformops/telemetry.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m30-has-all-three-gather-functions", "describe": "all three gather_*_evidence fetch functions are defined",
+      "run": "grep -cE '^def gather_(metrics|logs|alerts)_evidence\\(' labs/checkpoints/v2.5.0/src/platformops/observability.py",
+      "assert": { "matches": "^3$" }, "weight": 4 },
+
+    { "id": "m30-has-evaluate-observability-snapshot", "describe": "evaluate_observability_snapshot() -- the pure aggregation function -- is defined",
+      "run": "grep -c 'def evaluate_observability_snapshot(' labs/checkpoints/v2.5.0/src/platformops/observability.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m30-fetch-functions-have-no-status-words", "describe": "the three gather_*_evidence functions never contain a status word -- fetch never judges, mechanically proven",
+      "run": "awk '/^def gather_metrics_evidence\\(/{p=1} /^@dataclass/{exit} p' labs/checkpoints/v2.5.0/src/platformops/observability.py | grep -icE '\"ok\"|\"empty\"|\"firing\"|\"unknown\"'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m30-aggregate-function-never-calls-gather-or-httpx", "describe": "evaluate_observability_snapshot() never imports httpx and never calls a gather_* function",
+      "run": "awk '/^def evaluate_observability_snapshot\\(/{p=1} /^def inspect_observability\\(/{exit} p' labs/checkpoints/v2.5.0/src/platformops/observability.py | grep -cE 'httpx|gather_'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m30-module-never-imports-httpx-at-all", "describe": "observability.py never imports httpx anywhere in the file -- the aggregate side cannot reach the network even if edited",
+      "run": "grep -cE '^import httpx|^from httpx' labs/checkpoints/v2.5.0/src/platformops/observability.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m30-empty-and-unknown-are-distinct-statuses", "describe": "the module vocabulary distinguishes EMPTY (fetched, no data) from UNKNOWN (could not fetch)",
+      "run": "grep -c '\"EMPTY\"' labs/checkpoints/v2.5.0/src/platformops/observability.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-degrades-honestly-sources-failed", "describe": "evaluate_observability_snapshot() tracks sources_failed, the honest-degradation record",
+      "run": "grep -c 'sources_failed' labs/checkpoints/v2.5.0/src/platformops/observability.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m30-inspect-observability-uses-traced-operation", "describe": "inspect_observability() wraps its fetches in traced_operation()",
+      "run": "grep -c 'traced_operation(' labs/checkpoints/v2.5.0/src/platformops/observability.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m30-cli-has-observability-inspect-command", "describe": "observability-inspect CLI command is wired",
+      "run": "grep -c '@app.command(\"observability-inspect\")' labs/checkpoints/v2.5.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m30-no-aws-references-in-observability-module", "describe": "observability.py never references AWS/Floci -- this module does not touch cloud state",
+      "run": "grep -icE 'boto3|floci|AWS_ENDPOINT_URL|aws_access_key' labs/checkpoints/v2.5.0/src/platformops/observability.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m30-fixtures-directory-exists", "describe": "the observability fixtures directory exists in the checkpoint",
+      "run": "test -d labs/checkpoints/v2.5.0/tests/fixtures/observability && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m30-fixtures-cover-found-and-empty-scenarios", "describe": "fixtures include both a data-present and a genuinely empty metrics response",
+      "run": "test -f labs/checkpoints/v2.5.0/tests/fixtures/observability/metrics_query_success.json && test -f labs/checkpoints/v2.5.0/tests/fixtures/observability/metrics_query_empty.json && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m30-tests-files-exist", "describe": "tests/test_telemetry.py and tests/test_observability.py exist in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.5.0/tests/test_telemetry.py && test -f labs/checkpoints/v2.5.0/tests/test_observability.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m30-version-bumped", "describe": "pyproject.toml version is 2.5.0",
+      "run": "grep -c 'version = \"2.5.0\"' labs/checkpoints/v2.5.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-opentelemetry-deps-declared", "describe": "opentelemetry-api and opentelemetry-sdk are declared as runtime dependencies",
+      "run": "grep -c 'opentelemetry-api\\|opentelemetry-sdk' labs/checkpoints/v2.5.0/pyproject.toml",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m30-changelog-has-entry", "describe": "CHANGELOG.md has a [2.5.0] entry",
+      "run": "grep -c '## \\[2.5.0\\]' labs/checkpoints/v2.5.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m30-observability-automation/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m30-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '## Common pitfalls' site/docs/m30-observability-automation/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-lab-teardown-has-no-external-state", "describe": "the lab's Teardown never tells the learner to stop Floci or a container -- this module starts none",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m30-observability-automation/lab.md | grep -c '^floci stop\\|docker stop\\|docker rm'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m30-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m30-observability-automation/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m30-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m30-observability-automation/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

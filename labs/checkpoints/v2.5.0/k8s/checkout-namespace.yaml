@@ -1,0 +1,7 @@
+# The allowlisted namespace for this module's governed restart -- listed in
+# k8s-ops.example.yaml's namespace_allowlist. Both scenarios this module's
+# lab restarts (checkout-web, checkout-worker) live here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: checkout

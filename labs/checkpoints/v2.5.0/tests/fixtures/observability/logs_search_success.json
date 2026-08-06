@@ -1,0 +1,22 @@
+{
+  "query": "service:payments AND correlation_id:req-a1b2c3d4e5f6",
+  "total": 2,
+  "logs": [
+    {
+      "timestamp": "2026-08-01T09:00:01Z",
+      "level": "INFO",
+      "service": "payments",
+      "correlation_id": "req-a1b2c3d4e5f6",
+      "message": "received checkout request",
+      "trace_id": "f2b4f8e212a5367e9652705c8a22731c"
+    },
+    {
+      "timestamp": "2026-08-01T09:00:02Z",
+      "level": "ERROR",
+      "service": "payments",
+      "correlation_id": "req-a1b2c3d4e5f6",
+      "message": "payment gateway timeout after 3 retries",
+      "trace_id": "f2b4f8e212a5367e9652705c8a22731c"
+    }
+  ]
+}

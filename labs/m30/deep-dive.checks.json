@@ -1,0 +1,67 @@
+{
+  "checks": [
+    { "id": "m30-dd-file-exists", "describe": "deep-dive.md exists for M30",
+      "run": "test -f site/docs/m30-observability-automation/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m30-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-dd-has-mermaid-diagram", "describe": "deep dive has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m30-dd-has-fetch-purity-grep-proof", "describe": "deep dive shows the grep command proving fetch functions carry no status words",
+      "run": "grep -Fc 'gather_metrics_evidence' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-dd-has-aggregate-purity-grep-proof", "describe": "deep dive shows the grep command proving the aggregate function makes no network call",
+      "run": "grep -Fc 'httpx|gather_' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-dd-purity-proofs-show-exit-1", "describe": "the purity grep proofs' expected output shows exit=1 (zero matches) at least three times",
+      "run": "grep -c 'exit=1' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m30-dd-has-empty-vs-unknown-contrast", "describe": "deep dive proves the EMPTY vs UNKNOWN distinction with a live side-by-side script",
+      "run": "grep -c 'm30_empty_vs_unknown.py' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-dd-empty-vs-unknown-shows-both-statuses", "describe": "the side-by-side demo's expected output shows both EMPTY and UNKNOWN status values",
+      "run": "grep -Ec \"'status': 'EMPTY'|'status': 'UNKNOWN'\" site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^2$" }, "weight": 4 },
+
+    { "id": "m30-dd-has-tracerprovider-trap-demo", "describe": "deep dive proves the once-per-process TracerProvider trap live",
+      "run": "grep -c 'm30_tracerprovider_trap.py' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-dd-tracerprovider-trap-shows-real-warning", "describe": "the trap demo's expected output shows OpenTelemetry's own warning text",
+      "run": "grep -c 'Overriding of current TracerProvider is not allowed' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m30-dd-has-tracerprovider-fix-demo", "describe": "deep dive proves configure_tracing()'s defensive fix live",
+      "run": "grep -c 'm30_tracerprovider_fix.py' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m30-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m30-dd-use-it-when-bullets-present", "describe": "every closing bullet ends with a concrete Use it when trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m30-dd-version-reference", "describe": "deep dive's prerequisite check references v2.5.0",
+      "run": "grep -c 'platformops 2.5.0' site/docs/m30-observability-automation/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

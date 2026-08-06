@@ -1,0 +1,49 @@
+# Scenario 1: a transient, now-resolved failure -- the kind a governed
+# restart is actually FOR. checkout-web reads FEATURE_FLAGS from the
+# checkout-web-config ConfigMap as an environment variable. Applied by
+# itself (before checkout-web-config.yaml exists), the referenced key is
+# missing -- kubelet reports waiting.reason == "CreateContainerConfigError"
+# and never even starts the container. Unlike CrashLoopBackOff, kubelet's
+# retry backoff for this failure grows slowly (minutes), so within a short
+# lab session the Pod stays broken until something acts on it -- exactly
+# the situation a governed restart is for once the missing ConfigMap key
+# is added (see checkout-web-config.yaml).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-web
+  namespace: checkout
+  labels:
+    app: checkout-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkout-web
+  template:
+    metadata:
+      labels:
+        app: checkout-web
+    spec:
+      containers:
+        - name: checkout-web
+          image: busybox:1.36
+          command: ["sh", "-c", "echo starting with FEATURE_FLAGS=$FEATURE_FLAGS; sleep 3600"]
+          env:
+            - name: FEATURE_FLAGS
+              valueFrom:
+                configMapKeyRef:
+                  name: checkout-web-config
+                  key: FEATURE_FLAGS
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "true"]
+            initialDelaySeconds: 2
+            periodSeconds: 5
