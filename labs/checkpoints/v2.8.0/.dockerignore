@@ -1,0 +1,41 @@
+# Never ship the source tree's own virtual environment or caches into a
+# build context -- they are large, platform-specific, and the image builds
+# its own venv from uv.lock instead.
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__/
+*.py[oc]
+
+# Version control and editor metadata -- never useful inside the image, and
+# .git in particular can be large and carries full history, not just the
+# working tree.
+.git
+.gitignore
+.github
+
+# Course/tooling metadata that has nothing to do with what the container
+# runs. README.md stays IN the context -- pyproject.toml's `readme` field
+# points at it, and the builder's `uv sync --no-editable` step fails without
+# it.
+.claude
+skills
+AGENTS.md
+CLAUDE.md
+CHANGELOG.md
+
+# Local scratch files this project's own .gitignore already excludes from
+# git -- excluding them from the build context too means a stray resolved
+# config or audit log on a contributor's machine never leaks into an image
+# layer.
+*.resolved.yaml
+remediation-audit.jsonl
+
+# Tests are not part of what ships -- they run against the source tree in
+# CI, never inside the built image.
+tests
+
+# Kubernetes manifests are applied with kubectl from outside the image, not
+# baked in.
+k8s

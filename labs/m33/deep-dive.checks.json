@@ -1,0 +1,75 @@
+{
+  "checks": [
+    { "id": "m33-dd-file-exists", "describe": "deep-dive.md exists for M33",
+      "run": "test -f site/docs/m33-mlops-boundary/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m33-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-dd-has-mermaid-diagram", "describe": "deep dive has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m33-dd-has-get-only-count-proof", "describe": "deep dive shows the command counting exactly three GET requests in the MLflow section",
+      "run": "grep -Fc 'rg -c ' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m33-dd-has-write-verb-absence-proof", "describe": "deep dive shows the grep command proving no POST/PUT/DELETE/PATCH appears in the MLflow section",
+      "run": "grep -Fc '\"POST\"|\"PUT\"|\"DELETE\"|\"PATCH\"' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m33-dd-has-fetch-purity-grep-proof", "describe": "deep dive shows the grep command proving gather_model_evidence's function body carries no verdict word",
+      "run": "grep -Fc 'gather_model_evidence' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m33-dd-has-aggregate-purity-grep-proof", "describe": "deep dive shows the grep command proving evaluate_ai_workload never calls gather_* or check_health",
+      "run": "grep -Fc 'evaluate_ai_workload(' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m33-dd-purity-proofs-show-exit-1", "describe": "the purity/read-only grep proofs' expected output shows exit=1 (zero matches) at least three times",
+      "run": "grep -c 'exit=1' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m33-dd-has-chaining-proof-demo", "describe": "deep dive proves the run lookup is chained from the registry's own run_id, never guessed, with a live scenario",
+      "run": "grep -c 'm33_chaining_proof.py' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m33-dd-chaining-demo-covers-both-scenarios", "describe": "the chaining demo's expected output shows both a zero call count (model lookup failed) and a one call count (model lookup succeeded)",
+      "run": "grep -Ec 'call count: 0|call count: 1' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m33-dd-has-endpoint-contrast-demo", "describe": "deep dive contrasts an unreachable endpoint against an unhealthy-but-reachable one, live, from the same function",
+      "run": "grep -c 'm33_endpoint_contrast.py' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m33-dd-endpoint-contrast-shows-both-statuses", "describe": "the endpoint contrast demo's expected output shows both UNKNOWN and FAIL",
+      "run": "grep -Ec \"'status': 'UNKNOWN'|'status': 'FAIL'\" site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m33-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-dd-use-it-when-bullets-present", "describe": "each closing bullet ends with a Use it when: real-work trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m33-dd-version-reference", "describe": "deep dive names the correct version this page assumes",
+      "run": "grep -c 'platformops 2.8.0\\|~/platformops.*v2.8.0' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m33-dd-teardown-present", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m33-mlops-boundary/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

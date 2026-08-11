@@ -1,0 +1,13 @@
+{
+  "total_count": 1,
+  "workflow_runs": [
+    {
+      "id": 4821093771,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "main",
+      "html_url": "https://github.com/acme-platform/payments/actions/runs/4821093771"
+    }
+  ]
+}

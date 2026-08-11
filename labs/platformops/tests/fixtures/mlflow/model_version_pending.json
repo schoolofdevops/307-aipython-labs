@@ -1,0 +1,10 @@
+{
+  "model_version": {
+    "name": "support-assistant-intent-classifier",
+    "version": "5",
+    "current_stage": "None",
+    "status": "PENDING_REGISTRATION",
+    "run_id": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8",
+    "source": "s3://mlflow-artifacts/5/c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8/artifacts/model"
+  }
+}

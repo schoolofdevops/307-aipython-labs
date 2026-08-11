@@ -1,0 +1,11 @@
+name: support-assistant
+team_owner: ml-platform-team
+model_registry: mlflow
+registered_model_name: support-assistant-intent-classifier
+model_version: "4"
+serving_runtime: vllm
+endpoint: https://support-assistant.internal.example.com/v1/predict
+inference_mode: online
+observability:
+  dashboard_url: https://grafana.example.com/d/support-assistant
+  alert_channel: "#support-assistant-alerts"

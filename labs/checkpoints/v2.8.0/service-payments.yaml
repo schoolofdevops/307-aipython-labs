@@ -1,0 +1,11 @@
+name: payments
+repository: github.com/schoolofdevops/307-aipython-labs
+environment: prod
+team_owner: payments-team
+kubernetes_namespace: payments
+deployment_name: payments
+aws_account: "111122223333"
+region: us-east-1
+observability:
+  dashboard_url: https://grafana.example.com/d/payments
+  alert_channel: "#payments-alerts"

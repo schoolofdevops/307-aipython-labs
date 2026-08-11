@@ -1,0 +1,135 @@
+{
+  "checks": [
+    { "id": "m33-aiservice-module-exists", "describe": "aiservice.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.8.0/src/platformops/aiservice.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m33-ai-inspect-module-exists", "describe": "ai_inspect.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m33-aiservice-defines-class", "describe": "AIServiceDefinition is defined as its own model, not added to ServiceDefinition",
+      "run": "grep -c 'class AIServiceDefinition(BaseModel)' labs/checkpoints/v2.8.0/src/platformops/aiservice.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-servicedef-untouched", "describe": "servicedef.py's ServiceDefinition class was never modified to add AI fields",
+      "run": "grep -c 'model_version\\|serving_runtime\\|inference_mode' labs/checkpoints/v2.8.0/src/platformops/servicedef.py; true",
+      "assert": { "matches": "^0$" }, "weight": 4 },
+
+    { "id": "m33-model-version-pattern-digits-only", "describe": "model_version is constrained to a plain digit string, never 'latest' or 'vN'",
+      "run": "grep -Fc '_MODEL_VERSION_PATTERN = r\"^\\d+$\"' labs/checkpoints/v2.8.0/src/platformops/aiservice.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m33-inference-mode-is-literal-batch-online", "describe": "inference_mode only accepts batch or online",
+      "run": "grep -c 'InferenceMode = Literal\\[\"batch\", \"online\"\\]' labs/checkpoints/v2.8.0/src/platformops/aiservice.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-validate-ai-service-defined", "describe": "validate_ai_service() mirrors validate_service()'s never-raises contract",
+      "run": "grep -c 'def validate_ai_service(' labs/checkpoints/v2.8.0/src/platformops/aiservice.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-httpclient-has-three-mlflow-endpoints", "describe": "httpclient.py defines all three new MLflow-shaped functions",
+      "run": "grep -c '^def get_registered_model(\\|^def get_model_version(\\|^def get_run(' labs/checkpoints/v2.8.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^3$" }, "weight": 4 },
+
+    { "id": "m33-mlflow-endpoints-have-pydantic-models", "describe": "the three new endpoints validate responses through Pydantic models",
+      "run": "grep -c 'class RegisteredModelResponse(BaseModel)\\|class ModelVersionResponse(BaseModel)\\|class GetRunResponse(BaseModel)' labs/checkpoints/v2.8.0/src/platformops/httpclient.py",
+      "assert": { "matches": "^3$" }, "weight": 3 },
+
+    { "id": "m33-mlflow-calls-are-get-only", "describe": "all three MLflow functions issue exactly one GET request each -- three GETs total in the MLflow section",
+      "run": "awk '/# MLflow.s own REST API shape/,0' labs/checkpoints/v2.8.0/src/platformops/httpclient.py | grep -c '\"GET\"'",
+      "assert": { "matches": "^3$" }, "weight": 5 },
+
+    { "id": "m33-mlflow-section-never-issues-a-write-verb", "describe": "the MLflow section never issues a POST/PUT/DELETE/PATCH request -- read-only by construction",
+      "run": "awk '/# MLflow.s own REST API shape/,0' labs/checkpoints/v2.8.0/src/platformops/httpclient.py | grep -c '\"POST\"\\|\"PUT\"\\|\"DELETE\"\\|\"PATCH\"'; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m33-has-all-three-gather-functions", "describe": "all three gather_*_evidence fetch functions are defined",
+      "run": "grep -cE '^def gather_(model|run|endpoint)_evidence\\(' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^3$" }, "weight": 4 },
+
+    { "id": "m33-has-evaluate-ai-workload", "describe": "evaluate_ai_workload() -- the pure aggregation function -- is defined",
+      "run": "grep -c 'def evaluate_ai_workload(' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-fetch-functions-have-no-verdict-words", "describe": "the three gather_*_evidence functions never contain a verdict-status literal -- fetch never judges, mechanically proven",
+      "run": "awk '/^def gather_model_evidence\\(/{p=1} /^@dataclass/{exit} p' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py | grep -icE '\"(pass|fail|unknown|not_applicable)\"'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m33-aggregate-function-never-calls-gather-or-network", "describe": "evaluate_ai_workload() never calls a gather_* function, check_health(), or issues an httpx request verb",
+      "run": "awk '/^def evaluate_ai_workload\\(/{p=1} /^def inspect_ai_workload\\(/{exit} p' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py | grep -ciE 'gather_|check_health|httpx\\.(get|post|put|delete)'; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m33-batch-endpoint-is-not-applicable-not-fail", "describe": "gather_endpoint_evidence() skips the health check for batch inference, honestly, rather than reporting a failure",
+      "run": "grep -c 'batch inference has no standing endpoint to check' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m33-not-applicable-never-gates-verdict", "describe": "NOT_APPLICABLE is excluded from the gating sections that decide the overall verdict",
+      "run": "grep -c 'NOT_APPLICABLE' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m33-endpoint-unreachable-vs-unhealthy-distinct", "describe": "an unreachable endpoint (UNKNOWN) and a reachable-but-unhealthy endpoint (FAIL) are kept distinct",
+      "run": "grep -c '\"status\": \"UNKNOWN\"' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m33-run-id-chained-from-model-evidence", "describe": "inspect_ai_workload() reads run_id from the model version evidence rather than accepting one as an argument",
+      "run": "grep -c 'model_evidence.get(\"run_id\")' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m33-no-write-call-names-anywhere-in-module", "describe": "ai_inspect.py never calls a model-registration, stage-transition or restart function",
+      "run": "grep -cE 'create_model_version\\(|transition_model_version_stage\\(|update_registered_model\\(|execute_restart\\(|build_restart_plan\\(' labs/checkpoints/v2.8.0/src/platformops/ai_inspect.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m33-cli-has-ai-inspect-command", "describe": "ai-inspect CLI command is wired",
+      "run": "grep -c '@app.command(\"ai-inspect\")' labs/checkpoints/v2.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-cli-command-uses-inspect-ai-workload", "describe": "the CLI command calls inspect_ai_workload() rather than re-implementing the fetch/judge logic",
+      "run": "grep -c 'report = inspect_ai_workload(' labs/checkpoints/v2.8.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m33-fixtures-directory-exists", "describe": "the MLflow fixtures directory exists in the checkpoint",
+      "run": "test -d labs/checkpoints/v2.8.0/tests/fixtures/mlflow && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m33-fixtures-cover-ready-pending-finished-failed", "describe": "fixtures cover a ready version, a pending version, a finished run and a failed run",
+      "run": "test -f labs/checkpoints/v2.8.0/tests/fixtures/mlflow/model_version_ready.json && test -f labs/checkpoints/v2.8.0/tests/fixtures/mlflow/model_version_pending.json && test -f labs/checkpoints/v2.8.0/tests/fixtures/mlflow/run_finished.json && test -f labs/checkpoints/v2.8.0/tests/fixtures/mlflow/run_failed.json && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m33-tests-files-exist", "describe": "tests/test_aiservice.py and tests/test_ai_inspect.py exist in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.8.0/tests/test_aiservice.py && test -f labs/checkpoints/v2.8.0/tests/test_ai_inspect.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m33-example-ai-service-file-exists-and-validates", "describe": "service-support-assistant.ai.yaml exists and is a valid AIServiceDefinition",
+      "run": "cd labs/checkpoints/v2.8.0 && uv run python -c \"from platformops.config import load_yaml_dict; from platformops.aiservice import validate_ai_service, AIServiceDefinition; r = validate_ai_service(load_yaml_dict('service-support-assistant.ai.yaml')); print('valid' if isinstance(r, AIServiceDefinition) else 'invalid')\"",
+      "assert": { "matches": "^valid$" }, "weight": 4 },
+
+    { "id": "m33-version-bumped", "describe": "pyproject.toml version is 2.8.0",
+      "run": "grep -c 'version = \"2.8.0\"' labs/checkpoints/v2.8.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-changelog-has-entry", "describe": "CHANGELOG.md has a [2.8.0] entry",
+      "run": "grep -c '## \\[2.8.0\\]' labs/checkpoints/v2.8.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m33-mlops-boundary/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m33-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '## Common pitfalls' site/docs/m33-mlops-boundary/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m33-lab-teardown-has-no-external-state", "describe": "the lab's Teardown never tells the learner to stop Floci, kind, or a container -- this module starts none",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m33-mlops-boundary/lab.md | grep -c '^floci stop\\|docker stop\\|docker rm\\|kind delete'; true",
+      "assert": { "matches": "^0$" }, "weight": 3 },
+
+    { "id": "m33-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m33-mlops-boundary/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m33-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m33-mlops-boundary/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}
