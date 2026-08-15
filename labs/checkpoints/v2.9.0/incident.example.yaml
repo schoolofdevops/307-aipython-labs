@@ -1,0 +1,28 @@
+# Example incident registry -- platformops incident-collect reads a file shaped like this.
+#
+# This registry is the one new piece of state incidentcontext.py owns. No
+# earlier module records a runbook URL or an SLO commitment for a service --
+# service.yaml (Module 5/6) carries a dashboard URL and an alert channel,
+# but not a runbook or a target. incident-collect never calculates a real
+# error budget from live data -- no source in this project measures a real
+# request-success ratio yet -- it only displays the target a team already
+# committed to, next to the evidence it *did* collect live, so a responder
+# reads both in one place during an incident.
+#
+# target_percent is the SLO: the share of requests, over window_days, that
+# must succeed to keep the commitment made to this service's users. The
+# error budget is the other side of the same number -- for a 99.9% target,
+# 0.1% of requests over the window is the budget already spent or still
+# available before that commitment is broken.
+services:
+  payments:
+    runbook_url: "https://runbooks.example.internal/payments"
+    slo:
+      target_percent: 99.9
+      window_days: 30
+
+  checkout-api:
+    runbook_url: "https://runbooks.example.internal/checkout-api"
+    slo:
+      target_percent: 99.95
+      window_days: 30

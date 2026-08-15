@@ -1,0 +1,55 @@
+{
+  "checks": [
+    { "id": "m34-dd-file-exists", "describe": "deep-dive.md exists for M34",
+      "run": "test -f site/docs/m34-ai-release-readiness/deep-dive.md && echo exists",
+      "assert": { "matches": "^exists$" }, "weight": 2 },
+
+    { "id": "m34-dd-frontmatter-position", "describe": "deep dive frontmatter has sidebar_position 4",
+      "run": "grep -c 'sidebar_position: 4' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-dd-frontmatter-label", "describe": "deep dive frontmatter has the exact sidebar_label",
+      "run": "grep -c \"sidebar_label: 'Deep Dive (Part 2)'\" site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-dd-has-where-this-picks-up", "describe": "deep dive has the Where this picks up admonition",
+      "run": "grep -c ':::info\\[Where this picks up\\]' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-dd-has-write-verb-absence-proofs", "describe": "deep dive shows both write-verb-absence grep proofs (kubernetes_inspect.py and ai_release_readiness.py)",
+      "run": "grep -c 'rg -c ' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m34-dd-purity-proofs-show-exit-1", "describe": "the purity/read-only grep proofs' expected output shows exit=1 (zero matches) at least four times",
+      "run": "grep -c 'exit=1' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[4-9]" }, "weight": 3 },
+
+    { "id": "m34-dd-has-verdict-separation-proof-script", "describe": "deep dive proves the two verdicts never cross-contaminate with a live proof script",
+      "run": "grep -c 'm34_dd_contrast.py' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m34-dd-contrast-shows-both-scenarios", "describe": "the contrast proof's expected output shows both quality-not-ready and infra-not-ready combinations",
+      "run": "grep -c 'model_quality_verdict=not_ready infrastructure_verdict=ready\\|model_quality_verdict=ready infrastructure_verdict=not_ready' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^2$" }, "weight": 4 },
+
+    { "id": "m34-dd-has-dataclass-field-separation-proof", "describe": "deep dive shows the grep proof that DeploymentStatus and DeploymentResourceProfile carry disjoint fields",
+      "run": "grep -c 'class DeploymentResourceProfile' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m34-dd-has-where-you-will-use-this", "describe": "deep dive closes with the Where you will use this tip block",
+      "run": "grep -c ':::tip\\[Where you will use this\\]' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-dd-use-it-when-bullets-present", "describe": "each closing bullet ends with a Use it when: real-work trigger",
+      "run": "grep -c '\\*\\*Use it when:\\*\\*' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[3-9]" }, "weight": 3 },
+
+    { "id": "m34-dd-version-reference", "describe": "deep dive names the correct version this page assumes",
+      "run": "grep -c 'platformops 2.9.0' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m34-dd-teardown-present", "describe": "deep dive ends with a Teardown section",
+      "run": "grep -c '^## Teardown' site/docs/m34-ai-release-readiness/deep-dive.md",
+      "assert": { "matches": "^1$" }, "weight": 2 }
+  ]
+}

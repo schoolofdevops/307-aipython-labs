@@ -1,0 +1,8 @@
+# A dedicated namespace for the payments workload this module inspects.
+# Keeping it separate from the default namespace means kubectl get pods -A
+# or a namespace-scoped RBAC role (see the Deep Dive) has a clean boundary
+# to point at.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments

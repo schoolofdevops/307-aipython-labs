@@ -1,0 +1,35 @@
+# Scenario 2: a permanent failure -- the honest contrast case. The image
+# tag simply does not exist, so every pull attempt fails with
+# ImagePullBackOff. A governed restart is still a legitimate, safe thing to
+# attempt here -- the namespace allowlist and dry-run gates all pass, and
+# the restart really does trigger a fresh rollout -- but restarting cannot
+# fix a bad image tag. This is what this module's lab uses to prove
+# restart-execute's rollout-status timeout for real, and to make the
+# lesson's honesty point mechanically, not just in prose.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-worker
+  namespace: checkout
+  labels:
+    app: checkout-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkout-worker
+  template:
+    metadata:
+      labels:
+        app: checkout-worker
+    spec:
+      containers:
+        - name: checkout-worker
+          image: busybox:this-tag-does-not-exist-m29
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

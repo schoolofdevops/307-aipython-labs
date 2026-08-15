@@ -1,0 +1,52 @@
+# Runs platformops once, to completion, inside a kind cluster -- a Job, not
+# a Deployment. A Deployment keeps a process running forever and restarts
+# it if it dies; a Job runs a task to completion and stops. Validating a
+# service definition is a task with a clear end, so a Job is the right
+# primitive -- the same way a CI pipeline step is a Job, not a service.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: platformops-validate
+spec:
+  backoffLimit: 0 # a validation failure is real output, not a flake worth retrying
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false # this Job never calls the Kubernetes API
+      containers:
+        - name: platformops
+          image: platformops:2.2.0
+          imagePullPolicy: IfNotPresent
+          # Overrides the image's `ENTRYPOINT ["platformops"]` -- this Job
+          # runs the config loader directly so it can prove the
+          # environment-variable override (PLATFORMOPS_ENVIRONMENT, from
+          # the Secret below) actually reaches the resolved config.
+          command: ["python", "-m", "platformops.config"]
+          args: ["/config/service.yaml", "--check", "--json"]
+          envFrom:
+            - secretRef:
+                name: platformops-demo-secret
+          volumeMounts:
+            - name: service-config
+              mountPath: /config
+              readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: service-config
+          configMap:
+            name: platformops-service-config

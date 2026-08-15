@@ -1,0 +1,6 @@
+# A dedicated namespace for the model-serving workload this module inspects,
+# the same isolation payments-namespace.yaml (Module 28) already established.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ml-serving

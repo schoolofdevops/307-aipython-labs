@@ -1,0 +1,5 @@
+{
+  "query": "service:payments AND correlation_id:req-000000000000",
+  "total": 0,
+  "logs": []
+}

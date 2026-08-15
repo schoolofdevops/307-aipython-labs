@@ -1,0 +1,16 @@
+# Example API-key config -- `platformops api-serve` reads a file shaped like this.
+#
+# A real production version of this idea would issue short-lived tokens
+# through an identity provider (OAuth2 client-credentials, mTLS with a
+# per-service certificate) instead of a long-lived shared secret in a file.
+# This lab keeps the concept real but appropriately scoped: one static key
+# per caller, checked against the `X-API-Key` header on every request
+# except `GET /health`. See the lesson for what a production version would
+# add on top of this.
+#
+# Never commit a real key here -- these are throwaway values for the local
+# lab only, the same "example" convention remediation.example.yaml,
+# k8s-ops.example.yaml and incident.example.yaml already use.
+keys:
+  dev-ci-bot-key-local-only: ci-bot
+  dev-oncall-key-local-only: sre-oncall

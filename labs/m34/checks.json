@@ -1,0 +1,131 @@
+{
+  "checks": [
+    { "id": "m34-lesson-file-exists", "describe": "lesson.md exists for M34",
+      "run": "test -f site/docs/m34-ai-release-readiness/lesson.md && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m34-lesson-has-mermaid-diagram", "describe": "lesson has at least one Mermaid diagram",
+      "run": "grep -c '```mermaid' site/docs/m34-ai-release-readiness/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m34-lesson-has-common-pitfalls", "describe": "lesson has a Common pitfalls section",
+      "run": "grep -c '^## Common pitfalls' site/docs/m34-ai-release-readiness/lesson.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-lesson-references-module-33", "describe": "lesson picks up the thread Module 33 (ai_inspect) left open",
+      "run": "grep -c 'Module 33' site/docs/m34-ai-release-readiness/lesson.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 },
+
+    { "id": "m34-kubernetes-inspect-resource-profile-exists", "describe": "DeploymentResourceProfile and get_deployment_resource_profile() were added to kubernetes_inspect.py",
+      "run": "grep -c 'class DeploymentResourceProfile\\|def get_deployment_resource_profile(' labs/checkpoints/v2.9.0/src/platformops/kubernetes_inspect.py",
+      "assert": { "matches": "^2$" }, "weight": 3 },
+
+    { "id": "m34-kubernetes-inspect-still-no-write-calls", "describe": "kubernetes_inspect.py still makes zero create/patch/delete/replace API calls after this module's extension",
+      "run": "grep -cE '\\.(create|patch|delete|replace)_' labs/checkpoints/v2.9.0/src/platformops/kubernetes_inspect.py; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m34-ai-release-readiness-module-exists", "describe": "ai_release_readiness.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m34-reuses-ai-inspect-gather-functions", "describe": "ai_release_readiness.py imports gather_model_evidence and gather_endpoint_evidence from ai_inspect rather than re-implementing them",
+      "run": "grep -c 'from platformops.ai_inspect import gather_endpoint_evidence, gather_model_evidence' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m34-has-new-gather-functions", "describe": "the two new gather_*_evidence fetch functions are defined",
+      "run": "grep -cE '^def gather_(evaluation|kubernetes)_evidence\\(' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^2$" }, "weight": 4 },
+
+    { "id": "m34-has-evaluate-ai-release-readiness", "describe": "evaluate_ai_release_readiness() -- the pure aggregation function -- is defined",
+      "run": "grep -c 'def evaluate_ai_release_readiness(' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m34-fetch-functions-have-no-verdict-words", "describe": "gather_evaluation_evidence() never contains a verdict-status literal -- fetch never judges",
+      "run": "awk '/^def gather_evaluation_evidence\\(/{p=1} /^def gather_kubernetes_evidence\\(/{exit} p' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py | grep -icE '\"(pass|fail|unknown|not_applicable)\"'; true",
+      "assert": { "matches": "^0$" }, "weight": 5 },
+
+    { "id": "m34-aggregate-function-never-calls-gather-or-network", "describe": "evaluate_ai_release_readiness() never calls a gather_* function or issues an httpx/kubernetes call",
+      "run": "awk '/^def evaluate_ai_release_readiness\\(/{p=1} /^def check_ai_release_readiness\\(/{exit} p' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py | grep -ciE 'gather_|get_kubernetes_clients|get_run\\(|httpx\\.(get|post|put|delete)'; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m34-two-sub-verdicts-present", "describe": "the report keeps model_quality_verdict and infrastructure_verdict as separate fields",
+      "run": "grep -c 'model_quality_verdict' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 5 },
+
+    { "id": "m34-infrastructure-verdict-present", "describe": "infrastructure_verdict is a distinct field from model_quality_verdict",
+      "run": "grep -c 'infrastructure_verdict' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 5 },
+
+    { "id": "m34-deployed-version-field-present", "describe": "the report surfaces deployed_version -- the rollback-relevant fact -- unconditionally",
+      "run": "grep -c 'deployed_version' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m34-version-match-checks-the-model-version-label", "describe": "version correlation reads the deployment's model-version label",
+      "run": "grep -c 'MODEL_VERSION_LABEL' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m34-deployment-section-checks-resource-requests", "describe": "the deployment gating section fails when no resource requests are declared",
+      "run": "grep -c 'no resource requests' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py",
+      "assert": { "matches": "^1$" }, "weight": 4 },
+
+    { "id": "m34-no-write-call-names-anywhere-in-module", "describe": "ai_release_readiness.py never calls a model-registration, stage-transition, restart or k8s-mutation function",
+      "run": "grep -cE 'create_model_version\\(|transition_model_version_stage\\(|update_registered_model\\(|execute_restart\\(|build_restart_plan\\(|\\.(create|patch|delete|replace)_namespaced' labs/checkpoints/v2.9.0/src/platformops/ai_release_readiness.py; true",
+      "assert": { "matches": "^0$" }, "weight": 6 },
+
+    { "id": "m34-cli-has-ai-release-check-command", "describe": "ai-release-check CLI command is wired",
+      "run": "grep -c '@app.command(\"ai-release-check\")' labs/checkpoints/v2.9.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m34-cli-command-uses-check-ai-release-readiness", "describe": "the CLI command calls check_ai_release_readiness() rather than re-implementing the fetch/judge logic",
+      "run": "grep -c 'report = check_ai_release_readiness(' labs/checkpoints/v2.9.0/src/platformops/cli.py",
+      "assert": { "matches": "^1$" }, "weight": 3 },
+
+    { "id": "m34-fixtures-low-accuracy-exists", "describe": "the low-accuracy evaluation fixture exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.9.0/tests/fixtures/mlflow/run_finished_low_accuracy.json && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m34-k8s-manifests-exist", "describe": "the namespace, healthy-deployment and no-resources scenario manifests exist in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.9.0/k8s/support-assistant-namespace.yaml && test -f labs/checkpoints/v2.9.0/k8s/support-assistant-ready.yaml && test -f labs/checkpoints/v2.9.0/k8s/support-assistant-no-resources.yaml && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 3 },
+
+    { "id": "m34-tests-files-exist", "describe": "tests/test_ai_release_readiness.py exists in the checkpoint",
+      "run": "test -f labs/checkpoints/v2.9.0/tests/test_ai_release_readiness.py && echo present || echo missing",
+      "assert": { "contains": "present" }, "weight": 2 },
+
+    { "id": "m34-example-ai-service-file-still-validates", "describe": "service-support-assistant.ai.yaml still validates as an AIServiceDefinition",
+      "run": "cd labs/checkpoints/v2.9.0 && uv run python -c \"from platformops.config import load_yaml_dict; from platformops.aiservice import validate_ai_service, AIServiceDefinition; r = validate_ai_service(load_yaml_dict('service-support-assistant.ai.yaml')); print('valid' if isinstance(r, AIServiceDefinition) else 'invalid')\"",
+      "assert": { "matches": "^valid$" }, "weight": 4 },
+
+    { "id": "m34-version-bumped", "describe": "pyproject.toml version is 2.9.0",
+      "run": "grep -c 'version = \"2.9.0\"' labs/checkpoints/v2.9.0/pyproject.toml",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-changelog-has-entry", "describe": "CHANGELOG.md has a [2.9.0] entry",
+      "run": "grep -c '## \\[2.9.0\\]' labs/checkpoints/v2.9.0/CHANGELOG.md",
+      "assert": { "matches": "^1$" }, "weight": 2 },
+
+    { "id": "m34-lab-shows-quality-vs-infra-contrast", "describe": "lab folds in both the model-quality-only-failure and infra-only-failure live scenarios",
+      "run": "grep -c 'quality=not_ready infra=ready' site/docs/m34-ai-release-readiness/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m34-lab-shows-version-mismatch-proof", "describe": "lab folds in the real version-mismatch (rollback) scenario output",
+      "run": "grep -c 'deployment is running model version 3, service definition claims version 4' site/docs/m34-ai-release-readiness/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 4 },
+
+    { "id": "m34-lab-has-cli-command-name", "describe": "lab documents the real ai-release-check CLI command name",
+      "run": "grep -c 'ai-release-check' site/docs/m34-ai-release-readiness/lab.md",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m34-lab-tears-down-kind-cluster", "describe": "lab's Teardown deletes the kind cluster it created, unlike M33 which never started one",
+      "run": "sed -n '/^## Teardown/,$p' site/docs/m34-ai-release-readiness/lab.md | grep -c 'kind delete cluster'",
+      "assert": { "matches": "^[1-9]" }, "weight": 3 },
+
+    { "id": "m34-quiz-question-count", "describe": "quiz has between 10 and 15 questions",
+      "run": "grep -c 'prompt:' site/docs/m34-ai-release-readiness/quiz.mdx",
+      "assert": { "matches": "^1[0-5]$" }, "weight": 2 },
+
+    { "id": "m34-quiz-has-multiselect", "describe": "quiz has at least one multiSelect question",
+      "run": "grep -c 'multiSelect: true' site/docs/m34-ai-release-readiness/quiz.mdx",
+      "assert": { "matches": "^[1-9]" }, "weight": 2 }
+  ]
+}

@@ -1,0 +1,32 @@
+# Scenario 1: CrashLoopBackOff. The container starts and exits immediately
+# with a non-zero code every time -- kubelet keeps restarting it with a
+# growing back-off delay, and the pod's container status reports
+# waiting.reason == "CrashLoopBackOff" once it has failed enough times.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: payments
+  labels:
+    app: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments
+  template:
+    metadata:
+      labels:
+        app: payments
+    spec:
+      containers:
+        - name: payments
+          image: busybox:1.36
+          command: ["sh", "-c", "echo 'payments: unhandled startup error' >&2; exit 1"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

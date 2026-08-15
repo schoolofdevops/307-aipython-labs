@@ -1,0 +1,32 @@
+# Contrast case: schedules and rolls out fine (no readiness or scheduling
+# problem at all), but declares no resource requests on its one container --
+# no cpu, no memory, no nvidia.com/gpu. The rollout is real and healthy;
+# only the resource-request check fails.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-assistant-unbounded
+  namespace: ml-serving
+  labels:
+    app: support-assistant-unbounded
+    model-version: "4"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: support-assistant-unbounded
+  template:
+    metadata:
+      labels:
+        app: support-assistant-unbounded
+        model-version: "4"
+    spec:
+      containers:
+        - name: support-assistant
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep 3600"]
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "true"]
+            initialDelaySeconds: 2
+            periodSeconds: 5
